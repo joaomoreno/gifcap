@@ -2,5 +2,11 @@
   "name": "screen-recorder",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "dev": "http-server"
+  },
+  "devDependencies": {
+    "http-server": "^0.12.1"
+  }
 }
