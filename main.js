@@ -12,27 +12,6 @@ function createEvent() {
   return result;
 }
 
-function filter(event, fn) {
-  return listener => {
-    return event(data => {
-      if (fn(data)) {
-        listener(data);
-      }
-    });
-  };
-}
-
-function once(event) {
-  return listener => {
-    let dispose = event(data => {
-      listener(data);
-      dispose();
-    });
-
-    return dispose;
-  };
-}
-
 function main() {
   const recordButton = document.getElementById('record');
   const status = document.getElementById('status');
@@ -49,38 +28,21 @@ function main() {
     },
     onDidChangeState: createEvent(),
 
-    startRecording() {
+    async startRecording() {
+      if (this.state !== 'idle') {
+        return;
+      }
+
       this.state = 'recording';
-    },
 
-    stopRecording() {
-      this.state = 'idle';
-    }
-  };
-
-  app.onDidChangeState(state => {
-    if (state === 'idle') {
-      recordButton.textContent = 'Start Recording';
-    } else if (state === 'recording') {
-      recordButton.textContent = 'Stop Recording';
-    }
-  });
-
-  recordButton.addEventListener('click', async () => {
-    if (app.state === 'recording') {
-      app.stopRecording();
-    } else {
-      app.startRecording();
-
-      const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      video.srcObject = captureStream;
+      this.captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      video.srcObject = this.captureStream;
 
       const start = new Date().getTime();
       let timestamp = start;
       let first = true;
-      let gif;
 
-      const interval = setInterval(async () => {
+      this.interval = setInterval(async () => {
         try {
           let delay = 0;
 
@@ -88,24 +50,12 @@ function main() {
             const width = video.videoWidth;
             const height = video.videoHeight;
 
-            gif = new GIF({
-              workers: Math.max(Math.floor(navigator.hardwareConcurrency * 0.8), 2),
+            this.gif = new GIF({
+              workers: navigator.hardwareConcurrency,
               quality: 10,
               width,
               height,
               workerScript: 'vendor/gifjs/gif.worker.js',
-            });
-
-            gif.on('progress', p => {
-              status.textContent = `Processing: ${Math.floor(p * 100)}% done`;
-            });
-
-            gif.once('finished', blob => {
-              const url = URL.createObjectURL(blob);
-              const img = document.createElement('img');
-              img.src = url;
-              document.body.appendChild(img);
-              status.textContent = ``;
             });
 
             canvas.width = `${width}`;
@@ -121,7 +71,7 @@ function main() {
           }
 
           status.textContent = `Recording: ${Math.floor((now - start) / 1000)}s...`;
-          gif.addFrame(ctx, { copy: true, delay });
+          this.gif.addFrame(ctx, { copy: true, delay });
           first = false;
         } catch (err) {
           if (err) {
@@ -130,18 +80,61 @@ function main() {
         }
       }, 100);
 
-      once(filter(app.onDidChangeState, state => state === 'idle'))(() => {
-        for (const track of captureStream.getVideoTracks()) {
-          track.stop();
-        }
+      const track = this.captureStream.getVideoTracks()[0];
+      track.addEventListener('ended', () => this.stopRecording());
+    },
 
-        clearInterval(interval);
-        canvas.style.display = 'none';
-        gif.render();
-      })
+    stopRecording() {
+      if (this.state !== 'recording') {
+        return;
+      }
 
-      const stream = captureStream.getVideoTracks()[0];
-      stream.addEventListener('ended', () => app.stopRecording());
+      this.state = 'processing';
+
+      for (const track of this.captureStream.getVideoTracks()) {
+        track.stop();
+      }
+
+      clearInterval(this.interval);
+      canvas.style.display = 'none';
+
+      this.captureStream = undefined;
+      this.interval = undefined;
+
+      this.gif.render();
+
+      this.gif.on('progress', p => {
+        status.textContent = `Processing: ${Math.floor(p * 100)}% done`;
+      });
+
+      this.gif.once('finished', blob => {
+        const url = URL.createObjectURL(blob);
+        const img = document.createElement('img');
+        img.src = url;
+        document.body.appendChild(img);
+        status.textContent = ``;
+
+        this.gif = undefined;
+        this.state = 'idle';
+      });
+    }
+  };
+
+  app.onDidChangeState(state => {
+    if (state === 'idle') {
+      recordButton.textContent = 'Start Recording';
+    } else if (state === 'recording') {
+      recordButton.textContent = 'Stop Recording';
+    } else if (state === 'processing') {
+      recordButton.textContent = 'Processing...';
+    }
+  });
+
+  recordButton.addEventListener('click', async () => {
+    if (app.state === 'recording') {
+      app.stopRecording();
+    } else if (app.state === 'idle') {
+      app.startRecording();
     }
   });
 }
