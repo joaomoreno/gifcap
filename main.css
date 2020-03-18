@@ -2,3 +2,7 @@
   display: block;
   width: 600px;
 }
+
+#video {
+  display: none;
+}

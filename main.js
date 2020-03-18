@@ -1,12 +1,12 @@
 function main() {
   const recordButton = document.getElementById('record');
   const canvas = document.getElementById('canvas');
+  const video = document.getElementById('video');
   const ctx = canvas.getContext('2d');
 
   recordButton.addEventListener('click', async () => {
-    const captureStream = await navigator.mediaDevices.getDisplayMedia();
-    const track = captureStream.getVideoTracks()[0];
-    const imageCapture = new ImageCapture(track);
+    const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    video.srcObject = captureStream;
 
     let timestamp = new Date().getTime();
     let first = true;
@@ -14,16 +14,22 @@ function main() {
 
     const interval = setInterval(async () => {
       try {
-        const frame = await imageCapture.grabFrame();
         let delay = 0;
 
         if (first) {
+          const width = video.videoWidth;
+          const height = video.videoHeight;
+
           gif = new GIF({
-            workers: navigator.hardwareConcurrency,
+            workers: Math.max(Math.floor(navigator.hardwareConcurrency * 0.8), 2),
             quality: 10,
-            width: frame.width,
-            height: frame.height,
+            width,
+            height,
             workerScript: 'vendor/gifjs/gif.worker.js',
+          });
+
+          gif.on('progress', p => {
+            console.log(p);
           });
 
           gif.once('finished', blob => {
@@ -31,21 +37,22 @@ function main() {
             const img = document.createElement('img');
             img.src = url;
             document.body.appendChild(img);
-
-            // window.open(url);
           });
 
           setTimeout(() => {
+            for (const track of captureStream.getVideoTracks()) {
+              track.stop();
+            }
             clearInterval(interval);
             canvas.style.display = 'none';
             gif.render();
           }, 2000);
 
-          canvas.width = `${frame.width}`;
-          canvas.height = `${frame.height}`;
+          canvas.width = `${width}`;
+          canvas.height = `${height}`;
         }
 
-        ctx.drawImage(frame, 0, 0);
+        ctx.drawImage(video, 0, 0);
 
         if (!first) {
           const now = new Date().getTime();
@@ -60,7 +67,7 @@ function main() {
           throw err;
         }
       }
-    }, 42);
+    }, 100);
   });
 }
 
