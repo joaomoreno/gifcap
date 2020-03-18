@@ -20,7 +20,7 @@ function main() {
   const ctx = canvas.getContext('2d');
 
   const app = {
-    _state: 'idle',
+    _state: { name: 'idle' },
     get state() { return this._state; },
     set state(state) {
       this._state = state;
@@ -29,11 +29,11 @@ function main() {
     onDidChangeState: createEvent(),
 
     async startRecording() {
-      if (this.state !== 'idle') {
+      if (this.state.name !== 'idle') {
         return;
       }
 
-      this.state = 'recording';
+      this.state = { name: 'recording' };
 
       this.captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       video.srcObject = this.captureStream;
@@ -85,11 +85,11 @@ function main() {
     },
 
     stopRecording() {
-      if (this.state !== 'recording') {
+      if (this.state.name !== 'recording') {
         return;
       }
 
-      this.state = 'processing';
+      this.state = { name: 'processing', progress: 0 };
 
       for (const track of this.captureStream.getVideoTracks()) {
         track.stop();
@@ -103,8 +103,8 @@ function main() {
 
       this.gif.render();
 
-      this.gif.on('progress', p => {
-        status.textContent = `Processing: ${Math.floor(p * 100)}% done`;
+      this.gif.on('progress', progress => {
+        this.state = { name: 'processing', progress };
       });
 
       this.gif.once('finished', blob => {
@@ -115,25 +115,31 @@ function main() {
         status.textContent = ``;
 
         this.gif = undefined;
-        this.state = 'idle';
+        this.state = { name: 'idle' };
       });
     }
   };
 
   app.onDidChangeState(state => {
-    if (state === 'idle') {
+    if (state.name === 'idle') {
       recordButton.textContent = 'Start Recording';
-    } else if (state === 'recording') {
+      recordButton.disabled = null;
+      status.textContent = '';
+    } else if (state.name === 'recording') {
       recordButton.textContent = 'Stop Recording';
-    } else if (state === 'processing') {
+      recordButton.disabled = null;
+      status.textContent = '';
+    } else if (state.name === 'processing') {
       recordButton.textContent = 'Processing...';
+      recordButton.disabled = 'true';
+      status.textContent = `Processing: ${Math.floor(state.progress * 100)}% done`;
     }
   });
 
   recordButton.addEventListener('click', async () => {
-    if (app.state === 'recording') {
+    if (app.state.name === 'recording') {
       app.stopRecording();
-    } else if (app.state === 'idle') {
+    } else if (app.state.name === 'idle') {
       app.startRecording();
     }
   });
