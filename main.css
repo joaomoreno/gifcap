@@ -1,8 +1,8 @@
-#canvas {
+canvas {
   display: none;
   width: 600px;
 }
 
-#video {
+video {
   display: none;
 }

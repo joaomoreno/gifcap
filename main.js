@@ -1,48 +1,58 @@
-function createEvent() {
-  const listeners = new Set();
-  const result = listener => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  };
-  result.fire = data => {
-    for (const listener of listeners) {
-      listener(data);
+class App {
+
+  constructor() {
+    this.state = 'idle';
+  }
+
+  view() {
+    switch (this.state) {
+      case 'idle':
+        return m('div', [
+          m('div', [
+            m('button', { onclick: () => this.startRecording() }, 'Start Recording'),
+          ]),
+          this.recordedUrl ? m('img', { src: this.recordedUrl }) : undefined
+        ]);
+      case 'recording':
+        return m('div', [
+          m('div', [
+            m('button', { onclick: () => this.stopRecording() }, 'Stop Recording'),
+            typeof this.recordingStartTime === 'number' ? `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...` : undefined,
+          ]),
+          m('canvas', { width: 640, height: 480 }),
+          m('video', { autoplay: true, playsinline: true })
+        ]);
+      case 'rendering':
+        return m('div', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`);
     }
-  };
-  return result;
-}
+  }
 
-function main() {
-  const recordButton = document.getElementById('record');
-  const status = document.getElementById('status');
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+  onupdate(vnode) {
+    if (this.state === 'recording' && this.recording === undefined) {
+      const video = vnode.dom.getElementsByTagName('video')[0];
+      const canvas = vnode.dom.getElementsByTagName('canvas')[0];
+      this._startRecording(video, canvas);
+    }
+  }
 
-  const app = {
-    _state: { name: 'idle' },
-    get state() { return this._state; },
-    set state(state) {
-      this._state = state;
-      this.onDidChangeState.fire(state);
-    },
-    onDidChangeState: createEvent(),
+  startRecording() {
+    if (this.state !== 'idle') {
+      return;
+    }
 
-    async startRecording() {
-      if (this.state.name !== 'idle') {
-        return;
-      }
+    this.state = 'recording';
+  }
 
-      this.state = { name: 'recording' };
+  async _startRecording(video, canvas) {
+    try {
+      const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      video.srcObject = captureStream;
 
-      this.captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      video.srcObject = this.captureStream;
-
-      const start = new Date().getTime();
-      let timestamp = start;
+      const ctx = canvas.getContext('2d');
+      let timestamp = this.recordingStartTime = new Date().getTime();
       let first = true;
 
-      this.interval = setInterval(async () => {
+      const frameInterval = setInterval(async () => {
         try {
           let delay = 0;
 
@@ -50,7 +60,7 @@ function main() {
             const width = video.videoWidth;
             const height = video.videoHeight;
 
-            this.gif = new GIF({
+            this.recording.gif = new GIF({
               workers: navigator.hardwareConcurrency,
               quality: 10,
               width,
@@ -70,8 +80,7 @@ function main() {
             timestamp = now;
           }
 
-          status.textContent = `Recording: ${Math.floor((now - start) / 1000)}s...`;
-          this.gif.addFrame(ctx, { copy: true, delay });
+          this.recording.gif.addFrame(ctx, { copy: true, delay });
           first = false;
         } catch (err) {
           if (err) {
@@ -80,69 +89,57 @@ function main() {
         }
       }, 100);
 
-      const track = this.captureStream.getVideoTracks()[0];
-      track.addEventListener('ended', () => this.stopRecording());
-    },
+      const redrawInterval = setInterval(() => m.redraw(), 1000);
+      m.redraw();
 
-    stopRecording() {
-      if (this.state.name !== 'recording') {
-        return;
-      }
+      const track = captureStream.getVideoTracks()[0];
+      const endedListener = () => this.stopRecording();
+      track.addEventListener('ended', endedListener);
 
-      this.state = { name: 'processing', progress: 0 };
-
-      for (const track of this.captureStream.getVideoTracks()) {
-        track.stop();
-      }
-
-      clearInterval(this.interval);
-      canvas.style.display = 'none';
-
-      this.captureStream = undefined;
-      this.interval = undefined;
-
-      this.gif.render();
-
-      this.gif.on('progress', progress => {
-        this.state = { name: 'processing', progress };
-      });
-
-      this.gif.once('finished', blob => {
-        const url = URL.createObjectURL(blob);
-        const img = document.createElement('img');
-        img.src = url;
-        document.body.appendChild(img);
-        status.textContent = ``;
-
-        this.gif = undefined;
-        this.state = { name: 'idle' };
-      });
+      this.recording = {
+        gif: undefined,
+        stop: () => {
+          clearInterval(frameInterval);
+          clearInterval(redrawInterval);
+          track.removeEventListener('ended', endedListener);
+          track.stop();
+        }
+      };
+    } catch (err) {
+      this.state = 'idle';
+      m.redraw();
     }
-  };
+  }
 
-  app.onDidChangeState(state => {
-    if (state.name === 'idle') {
-      recordButton.textContent = 'Start Recording';
-      recordButton.disabled = null;
-      status.textContent = '';
-    } else if (state.name === 'recording') {
-      recordButton.textContent = 'Stop Recording';
-      recordButton.disabled = null;
-      status.textContent = '';
-    } else if (state.name === 'processing') {
-      recordButton.textContent = 'Processing...';
-      recordButton.disabled = 'true';
-      status.textContent = `Processing: ${Math.floor(state.progress * 100)}% done`;
+  stopRecording() {
+    if (this.state !== 'recording' || !this.recording) {
+      return;
     }
-  });
 
-  recordButton.addEventListener('click', async () => {
-    if (app.state.name === 'recording') {
-      app.stopRecording();
-    } else if (app.state.name === 'idle') {
-      app.startRecording();
-    }
-  });
+    this.state = 'rendering';
+    this.recording.stop();
+    this.renderingProgress = 0;
+
+    this.recording.gif.on('progress', progress => {
+      this.renderingProgress = progress;
+      m.redraw();
+    });
+
+    this.recording.gif.once('finished', blob => {
+      this.state = 'idle';
+      this.recordedUrl = URL.createObjectURL(blob)
+
+      m.redraw();
+    });
+
+    this.recording.gif.render();
+    this.recording = undefined;
+    this.recordingStartTime = undefined;
+  }
+}
+
+function main() {
+  m.mount(document.body, App);
 }
 
 window.addEventListener('load', main);
