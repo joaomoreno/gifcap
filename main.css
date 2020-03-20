@@ -1,3 +1,11 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: 'Roboto', sans-serif;
+}
+
 canvas {
   display: none;
   width: 600px;
@@ -5,4 +13,36 @@ canvas {
 
 video {
   display: none;
+}
+
+button {
+  font-family: 'Roboto', sans-serif;
+}
+
+.root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+}
+
+h1 {
+  font-family: 'Baloo 2', cursive;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.recording {
+  display: block;
+  max-width: 50%;
 }

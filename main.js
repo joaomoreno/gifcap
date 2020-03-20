@@ -5,25 +5,38 @@ class App {
   }
 
   view() {
+    return m('section', { class: 'root' }, [
+      m('header', [
+        m('h1', [
+          m('span', { class: 'gif' }, 'gif'),
+          m('span', { class: 'cap' }, 'cap'),
+        ])
+      ]),
+      m('section', { class: 'body' }, this.bodyView()),
+      m('footer', 'footer'),
+    ]);
+  }
+
+  bodyView() {
     switch (this.state) {
       case 'idle':
-        return m('div', [
+        return [
           m('div', [
             m('button', { onclick: () => this.startRecording() }, 'Start Recording'),
           ]),
-          this.recordedUrl ? m('img', { src: this.recordedUrl }) : undefined
-        ]);
+          this.recordedUrl ? m('img', { class: 'recording', src: this.recordedUrl }) : undefined
+        ];
       case 'recording':
-        return m('div', [
+        return [
           m('div', [
             m('button', { onclick: () => this.stopRecording() }, 'Stop Recording'),
-            typeof this.recordingStartTime === 'number' ? `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...` : undefined,
+            typeof this.recordingStartTime === 'number' ? m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`) : undefined,
           ]),
           m('canvas', { width: 640, height: 480 }),
           m('video', { autoplay: true, playsinline: true })
-        ]);
+        ];
       case 'rendering':
-        return m('div', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`);
+        return [m('div', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`)];
     }
   }
 
