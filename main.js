@@ -57,7 +57,9 @@ class App {
     video.srcObject = captureStream;
 
     const ctx = canvas.getContext('2d');
-    let timestamp = this.recordingStartTime = new Date().getTime();
+    this.recordingStartTime = new Date().getTime();
+
+    let timestamp = undefined;
     let first = true;
 
     const frameInterval = setInterval(async () => {
@@ -73,6 +75,7 @@ class App {
             quality: 10,
             width,
             height,
+            workerScript: 'gif.worker.js',
           });
 
           canvas.width = `${width}`;
@@ -87,13 +90,7 @@ class App {
           timestamp = now;
         }
 
-        try {
-        this.recording.gif.addFrame(ctx, { copy: true, delay });
-        } catch (err) {
-          if (!/The source width is 0/.test(err.message)) {
-            throw err;
-          }
-        }
+        this.recording.gif.addFrame(ctx, { copy: true, delay: first ? undefined : delay });
 
         first = false;
       } catch (err) {
