@@ -73,7 +73,6 @@ class App {
             quality: 10,
             width,
             height,
-            workerScript: 'vendor/gifjs/gif.worker.js',
           });
 
           canvas.width = `${width}`;
