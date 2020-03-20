@@ -87,7 +87,14 @@ class App {
           timestamp = now;
         }
 
+        try {
         this.recording.gif.addFrame(ctx, { copy: true, delay });
+        } catch (err) {
+          if (!/The source width is 0/.test(err.message)) {
+            throw err;
+          }
+        }
+
         first = false;
       } catch (err) {
         if (err) {
