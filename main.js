@@ -44,71 +44,75 @@ class App {
   }
 
   async _startRecording(video, canvas) {
+    let captureStream;
+
     try {
-      const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      video.srcObject = captureStream;
-
-      const ctx = canvas.getContext('2d');
-      let timestamp = this.recordingStartTime = new Date().getTime();
-      let first = true;
-
-      const frameInterval = setInterval(async () => {
-        try {
-          let delay = 0;
-
-          if (first) {
-            const width = video.videoWidth;
-            const height = video.videoHeight;
-
-            this.recording.gif = new GIF({
-              workers: navigator.hardwareConcurrency,
-              quality: 10,
-              width,
-              height,
-              workerScript: 'vendor/gifjs/gif.worker.js',
-            });
-
-            canvas.width = `${width}`;
-            canvas.height = `${height}`;
-          }
-
-          ctx.drawImage(video, 0, 0);
-          const now = new Date().getTime();
-
-          if (!first) {
-            delay = now - timestamp;
-            timestamp = now;
-          }
-
-          this.recording.gif.addFrame(ctx, { copy: true, delay });
-          first = false;
-        } catch (err) {
-          if (err) {
-            throw err;
-          }
-        }
-      }, 100);
-
-      const redrawInterval = setInterval(() => m.redraw(), 1000);
-      m.redraw();
-
-      const track = captureStream.getVideoTracks()[0];
-      const endedListener = () => this.stopRecording();
-      track.addEventListener('ended', endedListener);
-
-      this.recording = {
-        gif: undefined,
-        stop: () => {
-          clearInterval(frameInterval);
-          clearInterval(redrawInterval);
-          track.removeEventListener('ended', endedListener);
-          track.stop();
-        }
-      };
+      captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
     } catch (err) {
       this.state = 'idle';
       m.redraw();
+      return;
     }
+
+    video.srcObject = captureStream;
+
+    const ctx = canvas.getContext('2d');
+    let timestamp = this.recordingStartTime = new Date().getTime();
+    let first = true;
+
+    const frameInterval = setInterval(async () => {
+      try {
+        let delay = 0;
+
+        if (first) {
+          const width = video.videoWidth;
+          const height = video.videoHeight;
+
+          this.recording.gif = new GIF({
+            workers: navigator.hardwareConcurrency,
+            quality: 10,
+            width,
+            height,
+            workerScript: 'vendor/gifjs/gif.worker.js',
+          });
+
+          canvas.width = `${width}`;
+          canvas.height = `${height}`;
+        }
+
+        ctx.drawImage(video, 0, 0);
+        const now = new Date().getTime();
+
+        if (!first) {
+          delay = now - timestamp;
+          timestamp = now;
+        }
+
+        this.recording.gif.addFrame(ctx, { copy: true, delay });
+        first = false;
+      } catch (err) {
+        if (err) {
+          throw err;
+        }
+      }
+    }, 100);
+
+    const redrawInterval = setInterval(() => m.redraw(), 1000);
+    m.redraw();
+
+    const track = captureStream.getVideoTracks()[0];
+    const endedListener = () => this.stopRecording();
+    track.addEventListener('ended', endedListener);
+
+    this.recording = {
+      gif: undefined,
+      stop: () => {
+        clearInterval(frameInterval);
+        clearInterval(redrawInterval);
+        track.removeEventListener('ended', endedListener);
+        track.stop();
+      }
+    };
   }
 
   stopRecording() {
