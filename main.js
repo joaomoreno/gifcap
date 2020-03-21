@@ -23,13 +23,19 @@ class App {
         return [
           this.recordedUrl ? m('img', { class: 'recording', src: this.recordedUrl }) : undefined,
           m('div', [
-            m('button', { onclick: () => this.startRecording() }, 'Start Recording'),
+            m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
+              m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
+              'Start Recording'
+            ]),
           ])
         ];
       case 'recording':
         return [
           m('div', [
-            m('button', { onclick: () => this.stopRecording() }, 'Stop Recording'),
+            m('button', { class: 'button error', onclick: () => this.stopRecording() }, [
+              m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
+              'Stop Recording'
+            ]),
             typeof this.recordingStartTime === 'number' ? m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`) : undefined,
           ]),
           m('canvas', { width: 640, height: 480 }),
