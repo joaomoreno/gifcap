@@ -10,39 +10,60 @@ class App {
         m('h1', [
           m('span', { class: 'gif' }, 'gif'),
           m('span', { class: 'cap' }, 'cap'),
-        ])
+        ]),
+        m('p', 'Capture your screen to an animated GIF')
       ]),
-      m('section', { class: 'body' }, this.bodyView()),
+      m('section', { class: 'actions' }, this.actionsView()),
+      m('section', { class: 'status' }, this.statusView()),
+      m('section', { class: 'content' }, this.contentView()),
       m('footer', 'footer'),
     ]);
   }
 
-  bodyView() {
-    switch (this.state) {
-      case 'idle':
-        return [
-          this.recordedUrl ? m('img', { class: 'recording', src: this.recordedUrl }) : undefined,
-          m('div', [
-            m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
-              m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
-              'Start Recording'
-            ]),
-          ])
-        ];
-      case 'recording':
-        return [
-          m('div', [
-            m('button', { class: 'button error', onclick: () => this.stopRecording() }, [
-              m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
-              'Stop Recording'
-            ]),
-            typeof this.recordingStartTime === 'number' ? m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`) : undefined,
-          ]),
-          m('canvas', { width: 640, height: 480 }),
-          m('video', { autoplay: true, playsinline: true })
-        ];
-      case 'rendering':
-        return [m('div', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`)];
+  actionsView() {
+    if (this.state === 'idle') {
+      return [
+        m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
+          m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
+          'Start Recording'
+        ]),
+        this.recordedUrl && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
+          m('img', { src: 'https://icongr.am/octicons/trashcan.svg?size=16&color=ffffff' }),
+          'Clear'
+        ])
+      ];
+    }
+
+    if (this.state === 'recording') {
+      return [
+        m('button', { class: 'button error', onclick: () => this.stopRecording() }, [
+          m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
+          'Stop'
+        ])
+      ];
+    }
+  }
+
+  statusView() {
+    if (this.state === 'recording' && typeof this.recordingStartTime === 'number') {
+      return m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`);
+    }
+
+    if (this.state === 'rendering') {
+      return m('p', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`);
+    }
+  }
+
+  contentView() {
+    if (this.state === 'idle' && this.recordedUrl) {
+      return m('a', { href: this.recordedUrl, target: '_blank' }, [m('img', { class: 'recording', src: this.recordedUrl })]);
+    }
+
+    if (this.state === 'recording') {
+      return [
+        m('canvas', { width: 640, height: 480 }),
+        m('video', { autoplay: true, playsinline: true })
+      ];
     }
   }
 
@@ -161,6 +182,10 @@ class App {
     this.recording.gif.render();
     this.recording = undefined;
     this.recordingStartTime = undefined;
+  }
+
+  clearRecording() {
+    this.recordedUrl = undefined;
   }
 }
 

@@ -61,7 +61,16 @@ button > img {
   margin-right: 0.3em;
 }
 
-.body {
+.actions {
+  margin-bottom: 1em;
+}
+
+.actions, .status {
+  display: flex;
+  justify-content: center;
+}
+
+.content {
   flex: 1;
   display: flex;
   justify-content: center;
@@ -69,8 +78,9 @@ button > img {
   flex-direction: column;
 }
 
-.recording {
+img.recording {
+  max-width: 50vw;
+  max-height: 50vh;
   display: block;
-  max-width: 50%; 
   box-shadow: 0px 0px 10px 5px #00000054;
 }
