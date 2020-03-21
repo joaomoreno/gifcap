@@ -21,10 +21,10 @@ class App {
     switch (this.state) {
       case 'idle':
         return [
+          this.recordedUrl ? m('img', { class: 'recording', src: this.recordedUrl }) : undefined,
           m('div', [
             m('button', { onclick: () => this.startRecording() }, 'Start Recording'),
-          ]),
-          this.recordedUrl ? m('img', { class: 'recording', src: this.recordedUrl }) : undefined
+          ])
         ];
       case 'recording':
         return [
@@ -162,4 +162,4 @@ function main() {
   m.mount(document.body, App);
 }
 
-window.addEventListener('load', main);
+main();

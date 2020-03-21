@@ -1,9 +1,23 @@
+@import url('https://unpkg.com/chota@0.7.1');
+
+:root {
+  --color-primary: #14854F;
+  --color-lightGrey: #d2d6dd;
+  --color-grey: #747681;
+  --color-darkGrey: #3f4144;
+  --color-error: #d43939;
+  --color-success: #28bd14;
+  --grid-maxWidth: 120rem;
+  --grid-gutter: 2rem;
+  --font-size: 1.6rem;
+  --font-family: 'Roboto', sans-serif;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  font-family: 'Roboto', sans-serif;
 }
 
 canvas {
@@ -15,10 +29,6 @@ video {
   display: none;
 }
 
-button {
-  font-family: 'Roboto', sans-serif;
-}
-
 .root {
   width: 100%;
   height: 100%;
@@ -28,10 +38,14 @@ button {
 
 header {
   display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 
 h1 {
   font-family: 'Baloo 2', cursive;
+  font-size: 60px;
 }
 
 .body {
@@ -44,5 +58,7 @@ h1 {
 
 .recording {
   display: block;
-  max-width: 50%;
+  max-width: 50%; 
+  box-shadow: 0px 0px 10px 5px #00000054;
+  border-radius: 6px;
 }
