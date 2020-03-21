@@ -44,6 +44,9 @@ header {
 }
 
 footer {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
   padding: 1em;
   background: #fafafa;
   color: #9e9e9e;
