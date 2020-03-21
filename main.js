@@ -16,7 +16,12 @@ class App {
       m('section', { class: 'actions' }, this.actionsView()),
       m('section', { class: 'status' }, this.statusView()),
       m('section', { class: 'content' }, this.contentView()),
-      m('footer', 'footer'),
+      m('footer', [
+        'Made with ',
+        m('img', { src: 'https://icongr.am/octicons/heart.svg?size=12&color=9e9e9e' }), ,
+        ' by ',
+        m('a', { href: 'https://github.com/joaomoreno' }, 'João Moreno')
+      ]),
     ]);
   }
 
