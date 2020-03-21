@@ -20,6 +20,11 @@ html, body {
   height: 100%;
 }
 
+body {
+  display: flex;
+  flex-direction: column;
+}
+
 canvas {
   display: none;
   width: 600px;
@@ -27,13 +32,6 @@ canvas {
 
 video {
   display: none;
-}
-
-.root {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 header {
@@ -44,6 +42,9 @@ header {
 }
 
 footer {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
   padding: 1em;
   background: #fafafa;
   color: #9e9e9e;
@@ -74,6 +75,17 @@ button > img {
 .actions, .status {
   display: flex;
   justify-content: center;
+}
+
+#app-container {
+  flex: 1;
+}
+
+.app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .content {
