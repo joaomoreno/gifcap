@@ -5,27 +5,13 @@ class App {
   }
 
   view() {
-    return m('section', { class: 'root' }, [
-      m('header', [
-        m('h1', [
-          m('span', { class: 'gif' }, 'gif'),
-          m('span', { class: 'cap' }, 'cap'),
-        ]),
-        m('p', 'Capture your screen to an animated GIF')
-      ]),
-      m('section', { class: 'actions' }, this.actionsView()),
-      m('section', { class: 'status' }, this.statusView()),
-      m('section', { class: 'content' }, this.contentView()),
-      m('footer', [
-        m('span', [
-          'Made ',
-          ' with ',
-          m('img', { src: 'https://icongr.am/octicons/heart.svg?size=12&color=9e9e9e' }), ,
-          ' by ',
-          m('a', { href: 'https://github.com/joaomoreno' }, 'João Moreno')
-        ])
-      ]),
-    ]);
+    return [
+      m('section', { class: 'app' }, [
+        m('section', { class: 'actions' }, this.actionsView()),
+        m('section', { class: 'status' }, this.statusView()),
+        m('section', { class: 'content' }, this.contentView())
+      ])
+    ];
   }
 
   actionsView() {
@@ -198,7 +184,7 @@ class App {
 }
 
 function main() {
-  m.mount(document.body, App);
+  m.mount(document.getElementById('app-container'), App);
 }
 
 main();
