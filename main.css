@@ -43,11 +43,11 @@ header {
 
 footer {
   display: flex;
-  align-items: flex-end;
-  flex-direction: column;
+  justify-content: space-between;
   padding: 1em;
   background: #fafafa;
   color: #9e9e9e;
+  border-top: 1px solid #9e9e9e;
 }
 
 h1 {
@@ -100,5 +100,5 @@ img.recording {
   max-width: 50vw;
   max-height: 50vh;
   display: block;
-  box-shadow: 0px 0px 10px 5px #00000054;
+  box-shadow: 0px 0px 5px 1px #00000054;
 }
