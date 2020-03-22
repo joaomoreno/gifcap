@@ -54,10 +54,10 @@ class App {
     }
 
     if (this.state === 'recording') {
-      return [
+      return m('div', [
         m('canvas', { width: 640, height: 480 }),
         m('video', { autoplay: true, playsinline: true })
-      ];
+      ]);
     }
   }
 
