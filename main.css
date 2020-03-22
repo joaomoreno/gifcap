@@ -100,5 +100,5 @@ img.recording {
   max-width: 50vw;
   max-height: 50vh;
   display: block;
-  box-shadow: 0px 0px 10px 5px #00000054;
+  box-shadow: 0px 0px 5px 1px #00000054;
 }
