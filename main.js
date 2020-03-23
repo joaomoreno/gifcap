@@ -32,7 +32,7 @@ class App {
           m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
           'Start Recording'
         ]),
-        this.recordedUrl && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
+        this.recorded && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
           m('img', { src: 'https://icongr.am/octicons/trashcan.svg?size=16&color=ffffff' }),
           'Clear'
         ])
@@ -60,14 +60,14 @@ class App {
 
   contentView() {
     if (this.state === 'idle') {
-      if (this.recordedUrl) {
+      if (this.recorded) {
         return m('div.recording-card', [
-          m('a', { href: this.recordedUrl, target: '_blank' }, [
-            m('img.recording', { src: this.recordedUrl })
+          m('a', { href: this.recorded.url, target: '_blank' }, [
+            m('img.recording', { src: this.recorded.url })
           ]),
           m('footer', [
-            m('span', 'one'),
-            m('span', 'two'),
+            m('span', timediff(this.recorded.duration)),
+            m('span', unitFormat(this.recorded.size, 'b', undefined, 2)),
           ]),
         ]);
       } else {
@@ -79,7 +79,7 @@ class App {
 
     if (this.state === 'recording') {
       return m('div', [
-        typeof this.recordingStartTime === 'number' ? m('p', `Recording ${timediff(new Date().getTime() - this.recordingStartTime + 58000)}...`) : undefined,
+        typeof this.recordingStartTime === 'number' ? m('p', `Recording ${timediff(new Date().getTime() - this.recordingStartTime)}...`) : undefined,
         m('canvas', { width: 640, height: 480 }),
         m('video', { autoplay: true, playsinline: true })
       ]);
@@ -189,6 +189,8 @@ class App {
     }
 
     this.state = 'rendering';
+
+    const duration = new Date() - this.recordingStartTime;
     this.recording.stop();
     this.renderingProgress = 0;
 
@@ -205,7 +207,11 @@ class App {
 
     this.recording.gif.once('finished', blob => {
       this.state = 'idle';
-      this.recordedUrl = URL.createObjectURL(blob);
+      this.recorded = {
+        duration,
+        size: blob.size,
+        url: URL.createObjectURL(blob),
+      };
       done();
     });
 
@@ -226,7 +232,7 @@ class App {
   }
 
   clearRecording() {
-    this.recordedUrl = undefined;
+    this.recorded = undefined;
   }
 }
 
