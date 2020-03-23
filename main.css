@@ -1,9 +1,9 @@
 @import url('https://unpkg.com/chota@0.7.1');
 
 :root {
-  --color-primary: #14854F;
+  --color-primary: #AD2C2C;
   --color-lightGrey: #d2d6dd;
-  --color-grey: #747681;
+  --color-grey: #2E2E2E;
   --color-darkGrey: #3f4144;
   --color-error: #d43939;
   --color-success: #28bd14;
@@ -23,6 +23,7 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
+  color: #333;
 }
 
 canvas {
@@ -34,14 +35,14 @@ video {
   display: none;
 }
 
-header {
+#app-header {
   display: flex;
   justify-content: center;
   flex-direction: column;
   align-items: center;
 }
 
-footer {
+#app-footer {
   display: flex;
   justify-content: space-between;
   padding: 1em;
@@ -52,7 +53,15 @@ footer {
 
 h1 {
   font-family: 'Baloo 2', cursive;
-  font-size: 60px;
+  font-size: 5em;
+}
+
+.gif {
+  color: #AD2C2C;
+}
+
+.cap {
+  color: #2E2E2E;
 }
 
 .button {
@@ -69,10 +78,11 @@ button > img {
 }
 
 .actions {
-  margin-bottom: 1em;
+  padding: 2em;
+  display: flex;
 }
 
-.actions, .status {
+.status {
   display: flex;
   justify-content: center;
 }
@@ -96,9 +106,21 @@ button > img {
   flex-direction: column;
 }
 
+.content {
+  font-size: 20px;
+}
+
 img.recording {
   max-width: 50vw;
   max-height: 50vh;
   display: block;
   box-shadow: 0px 0px 5px 1px #00000054;
+}
+
+.recording-card > footer {
+  border-top: 1px solid #9e9e9e;
+  margin-top: 18px;
+  padding-top: 10px;
+  display: flex;
+  justify-content: space-between;
 }

@@ -7,9 +7,8 @@ class App {
   view() {
     return [
       m('section', { class: 'app' }, [
-        m('section', { class: 'actions' }, this.actionsView()),
-        m('section', { class: 'status' }, this.statusView()),
-        m('section', { class: 'content' }, this.contentView())
+        m('section', { class: 'content' }, this.contentView()),
+        m('section', { class: 'actions' }, this.actionsView())
       ])
     ];
   }
@@ -30,33 +29,53 @@ class App {
 
     if (this.state === 'recording') {
       return [
-        m('button', { class: 'button error', onclick: () => this.stopRecording() }, [
+        m('button', { class: 'button secondary', onclick: () => this.stopRecording() }, [
           m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
           'Stop'
         ])
       ];
     }
-  }
-
-  statusView() {
-    if (this.state === 'recording' && typeof this.recordingStartTime === 'number') {
-      return m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`);
-    }
 
     if (this.state === 'rendering') {
-      return m('p', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`);
+      return [
+        m('button', { class: 'button secondary', onclick: () => this.cancelRecording() }, [
+          m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
+          'Cancel'
+        ])
+      ];
     }
   }
 
   contentView() {
-    if (this.state === 'idle' && this.recordedUrl) {
-      return m('a', { href: this.recordedUrl, target: '_blank' }, [m('img', { class: 'recording', src: this.recordedUrl })]);
+    if (this.state === 'idle') {
+      if (this.recordedUrl) {
+        return m('div.recording-card', [
+          m('a', { href: this.recordedUrl, target: '_blank' }, [
+            m('img.recording', { src: this.recordedUrl })
+          ]),
+          m('footer', [
+            m('span', 'one'),
+            m('span', 'two'),
+          ]),
+        ]);
+      } else {
+        return m('p', [
+          'Create animated GIFs from a screen recording.'
+        ]);
+      }
     }
 
     if (this.state === 'recording') {
       return m('div', [
+        typeof this.recordingStartTime === 'number' ? m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`) : undefined,
         m('canvas', { width: 640, height: 480 }),
         m('video', { autoplay: true, playsinline: true })
+      ]);
+    }
+
+    if (this.state === 'rendering') {
+      return m('div', [
+        m('p', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`)
       ]);
     }
   }
