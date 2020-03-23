@@ -172,7 +172,7 @@ class App {
   }
 
   stopRecording() {
-    if (this.state !== 'recording' || !this.recording) {
+    if (this.state !== 'recording') {
       return;
     }
 
@@ -185,16 +185,32 @@ class App {
       m.redraw();
     });
 
+    const done = () => {
+      this.recording = undefined;
+      this.recordingStartTime = undefined;
+      m.redraw();
+    };
+
     this.recording.gif.once('finished', blob => {
       this.state = 'idle';
-      this.recordedUrl = URL.createObjectURL(blob)
+      this.recordedUrl = URL.createObjectURL(blob);
+      done();
+    });
 
-      m.redraw();
+    this.recording.gif.once('abort', () => {
+      this.state = 'idle';
+      done();
     });
 
     this.recording.gif.render();
-    this.recording = undefined;
-    this.recordingStartTime = undefined;
+  }
+
+  cancelRecording() {
+    if (this.state !== 'rendering') {
+      return;
+    }
+
+    this.recording.gif.abort();
   }
 
   clearRecording() {
