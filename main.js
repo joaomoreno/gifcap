@@ -14,6 +14,7 @@ class App {
 
   constructor() {
     this.state = 'idle';
+    window.onbeforeunload = () => this.state === 'recording' || this.state === 'rendering' || this.recorded ? '' : null;
   }
 
   view() {
@@ -34,7 +35,7 @@ class App {
         ]),
         this.recorded && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
           m('img', { src: 'https://icongr.am/octicons/trashcan.svg?size=16&color=ffffff' }),
-          'Clear'
+          'Discard'
         ])
       ];
     }
@@ -105,6 +106,11 @@ class App {
       return;
     }
 
+    if (this.recorded && !window.confirm('This will discard the current recording, are you sure you want to continue?')) {
+      return;
+    }
+
+    this.recorded = undefined;
     this.state = 'recording';
   }
 
