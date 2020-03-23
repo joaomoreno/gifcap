@@ -1,3 +1,15 @@
+function timediff(millis) {
+  const abs = Math.floor(millis / 1000);
+  const mins = Math.floor(abs / 60);
+  const secs = abs % 60;
+
+  if (mins > 0) {
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
+}
+
 class App {
 
   constructor() {
@@ -67,7 +79,7 @@ class App {
 
     if (this.state === 'recording') {
       return m('div', [
-        typeof this.recordingStartTime === 'number' ? m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`) : undefined,
+        typeof this.recordingStartTime === 'number' ? m('p', `Recording ${timediff(new Date().getTime() - this.recordingStartTime + 58000)}...`) : undefined,
         m('canvas', { width: 640, height: 480 }),
         m('video', { autoplay: true, playsinline: true })
       ]);
