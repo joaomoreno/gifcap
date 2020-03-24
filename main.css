@@ -124,3 +124,12 @@ img.recording {
   display: flex;
   justify-content: space-between;
 }
+
+.tag, .tag > a {
+  display: flex;
+  align-items: center;
+}
+
+.tag img {
+  margin-right: 0.3em;
+}

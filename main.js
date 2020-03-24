@@ -2,13 +2,33 @@ function timediff(millis) {
   const abs = Math.floor(millis / 1000);
   const mins = Math.floor(abs / 60);
   const secs = abs % 60;
+  const s = `${secs < 10 ? '0' : ''}${secs}`;
+  const m = mins > 0 ? `${mins < 10 ? '0' : ''}${mins}` : '00';
+  return `${m}:${s}`;
+}
 
-  if (mins > 0) {
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}s`;
+function humanSize(size) {
+  if (size < 1024) {
+    return '1 KB';
+  }
+
+  size = Math.round(size / 1024);
+
+  if (size < 1024) {
+    return `${size} KB`
   } else {
-    return `${secs}s`;
+    return `${Math.floor(size / 1024 * 100) / 100} MB`;
   }
 }
+
+const Timer = {
+  view(vnode) {
+    return m('span.tag.is-small', [
+      m('img', { src: 'https://icongr.am/octicons/clock.svg?size=16&color=333333' }),
+      timediff(vnode.attrs.duration)
+    ]);
+  }
+};
 
 class App {
 
@@ -67,8 +87,13 @@ class App {
             m('img.recording', { src: this.recorded.url })
           ]),
           m('footer', [
-            m('span', timediff(this.recorded.duration)),
-            m('span', unitFormat(this.recorded.size, 'b', undefined, 2)),
+            m(Timer, { duration: this.recorded.duration }),
+            m('span.tag.is-small', [
+              m('a.recording-detail', { href: this.recorded.url, target: '_blank' }, [
+                m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
+                humanSize(this.recorded.size)
+              ])
+            ]),
           ]),
         ]);
       } else {
@@ -80,15 +105,15 @@ class App {
 
     if (this.state === 'recording') {
       return m('div', [
-        typeof this.recordingStartTime === 'number' ? m('p', `Recording ${timediff(new Date().getTime() - this.recordingStartTime)}...`) : undefined,
+        m(Timer, { duration: typeof this.recordingStartTime === 'number' ? new Date().getTime() - this.recordingStartTime : 0 }),
         m('canvas', { width: 640, height: 480 }),
-        m('video', { autoplay: true, playsinline: true })
+        m('video', { autoplay: true, playsinline: true }),
       ]);
     }
 
     if (this.state === 'rendering') {
       return m('div', [
-        m('p', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`)
+        m('progress', { max: '1', value: this.renderingProgress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.renderingProgress * 100)}%`),
       ]);
     }
   }
