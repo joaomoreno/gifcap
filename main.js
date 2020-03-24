@@ -97,9 +97,10 @@ class App {
           ]),
         ]);
       } else {
-        return m('p', [
-          'Create animated GIFs from a screen recording.'
-        ]);
+        return [
+          m('p', 'Create animated GIFs from a screen recording.'),
+          m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
+        ];
       }
     }
 
