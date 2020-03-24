@@ -49,7 +49,7 @@ class App {
   actionsView() {
     if (this.state === 'idle') {
       return [
-        m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
+        this.recorded && m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
           m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
           'Start Recording'
         ]),
