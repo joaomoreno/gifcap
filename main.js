@@ -1,15 +1,47 @@
+function timediff(millis) {
+  const abs = Math.floor(millis / 1000);
+  const mins = Math.floor(abs / 60);
+  const secs = abs % 60;
+  const s = `${secs < 10 ? '0' : ''}${secs}`;
+  const m = mins > 0 ? `${mins < 10 ? '0' : ''}${mins}` : '00';
+  return `${m}:${s}`;
+}
+
+function humanSize(size) {
+  if (size < 1024) {
+    return '1 KB';
+  }
+
+  size = Math.round(size / 1024);
+
+  if (size < 1024) {
+    return `${size} KB`
+  } else {
+    return `${Math.floor(size / 1024 * 100) / 100} MB`;
+  }
+}
+
+const Timer = {
+  view(vnode) {
+    return m('span.tag.is-small', [
+      m('img', { src: 'https://icongr.am/octicons/clock.svg?size=16&color=333333' }),
+      timediff(vnode.attrs.duration)
+    ]);
+  }
+};
+
 class App {
 
   constructor() {
     this.state = 'idle';
+    window.onbeforeunload = () => this.state === 'recording' || this.state === 'rendering' || this.recorded ? '' : null;
   }
 
   view() {
     return [
       m('section', { class: 'app' }, [
-        m('section', { class: 'actions' }, this.actionsView()),
-        m('section', { class: 'status' }, this.statusView()),
-        m('section', { class: 'content' }, this.contentView())
+        m('section', { class: 'content' }, this.contentView()),
+        m('section', { class: 'actions' }, this.actionsView())
       ])
     ];
   }
@@ -21,42 +53,67 @@ class App {
           m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
           'Start Recording'
         ]),
-        this.recordedUrl && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
+        this.recorded && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
           m('img', { src: 'https://icongr.am/octicons/trashcan.svg?size=16&color=ffffff' }),
-          'Clear'
+          'Discard'
         ])
       ];
     }
 
     if (this.state === 'recording') {
       return [
-        m('button', { class: 'button error', onclick: () => this.stopRecording() }, [
+        m('button', { class: 'button secondary', onclick: () => this.stopRecording() }, [
           m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
           'Stop'
         ])
       ];
     }
-  }
-
-  statusView() {
-    if (this.state === 'recording' && typeof this.recordingStartTime === 'number') {
-      return m('p', `Recording ${Math.floor((new Date().getTime() - this.recordingStartTime) / 1000)}s...`);
-    }
 
     if (this.state === 'rendering') {
-      return m('p', `Rendering ${Math.floor(this.renderingProgress * 100)}%...`);
+      return [
+        m('button', { class: 'button secondary', onclick: () => this.cancelRecording() }, [
+          m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
+          'Cancel'
+        ])
+      ];
     }
   }
 
   contentView() {
-    if (this.state === 'idle' && this.recordedUrl) {
-      return m('a', { href: this.recordedUrl, target: '_blank' }, [m('img', { class: 'recording', src: this.recordedUrl })]);
+    if (this.state === 'idle') {
+      if (this.recorded) {
+        return m('div.recording-card', [
+          m('a', { href: this.recorded.url, target: '_blank' }, [
+            m('img.recording', { src: this.recorded.url })
+          ]),
+          m('footer', [
+            m(Timer, { duration: this.recorded.duration }),
+            m('span.tag.is-small', [
+              m('a.recording-detail', { href: this.recorded.url, target: '_blank' }, [
+                m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
+                humanSize(this.recorded.size)
+              ])
+            ]),
+          ]),
+        ]);
+      } else {
+        return m('p', [
+          'Create animated GIFs from a screen recording.'
+        ]);
+      }
     }
 
     if (this.state === 'recording') {
       return m('div', [
+        m(Timer, { duration: typeof this.recordingStartTime === 'number' ? new Date().getTime() - this.recordingStartTime : 0 }),
         m('canvas', { width: 640, height: 480 }),
-        m('video', { autoplay: true, playsinline: true })
+        m('video', { autoplay: true, playsinline: true }),
+      ]);
+    }
+
+    if (this.state === 'rendering') {
+      return m('div', [
+        m('progress', { max: '1', value: this.renderingProgress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.renderingProgress * 100)}%`),
       ]);
     }
   }
@@ -74,6 +131,11 @@ class App {
       return;
     }
 
+    if (this.recorded && !window.confirm('This will discard the current recording, are you sure you want to continue?')) {
+      return;
+    }
+
+    this.recorded = undefined;
     this.state = 'recording';
   }
 
@@ -153,11 +215,13 @@ class App {
   }
 
   stopRecording() {
-    if (this.state !== 'recording' || !this.recording) {
+    if (this.state !== 'recording') {
       return;
     }
 
     this.state = 'rendering';
+
+    const duration = new Date() - this.recordingStartTime;
     this.recording.stop();
     this.renderingProgress = 0;
 
@@ -166,20 +230,40 @@ class App {
       m.redraw();
     });
 
+    const done = () => {
+      this.recording = undefined;
+      this.recordingStartTime = undefined;
+      m.redraw();
+    };
+
     this.recording.gif.once('finished', blob => {
       this.state = 'idle';
-      this.recordedUrl = URL.createObjectURL(blob)
+      this.recorded = {
+        duration,
+        size: blob.size,
+        url: URL.createObjectURL(blob),
+      };
+      done();
+    });
 
-      m.redraw();
+    this.recording.gif.once('abort', () => {
+      this.state = 'idle';
+      done();
     });
 
     this.recording.gif.render();
-    this.recording = undefined;
-    this.recordingStartTime = undefined;
+  }
+
+  cancelRecording() {
+    if (this.state !== 'rendering') {
+      return;
+    }
+
+    this.recording.gif.abort();
   }
 
   clearRecording() {
-    this.recordedUrl = undefined;
+    this.recorded = undefined;
   }
 }
 
