@@ -97,9 +97,14 @@ class App {
           ]),
         ]);
       } else {
-        return m('p', [
-          'Create animated GIFs from a screen recording.'
-        ]);
+        return [
+          m('p', 'Create animated GIFs from a screen recording.'),
+          m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
+          m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
+            m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
+            'Start Recording'
+          ])
+        ];
       }
     }
 
