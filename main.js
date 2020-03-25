@@ -157,6 +157,7 @@ class App {
     try {
       captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
     } catch (err) {
+      console.error(err);
       this.state = 'idle';
       m.redraw();
       return;
