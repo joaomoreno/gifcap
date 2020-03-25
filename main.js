@@ -168,45 +168,27 @@ class App {
     const ctx = canvas.getContext('2d');
     this.recordingStartTime = new Date().getTime();
 
-    let timestamp = undefined;
-    let first = true;
-
     const frameInterval = setInterval(async () => {
-      try {
-        let delay = 0;
-
-        if (first) {
-          const width = video.videoWidth;
-          const height = video.videoHeight;
-
-          this.recording.gif = new GIF({
-            workers: navigator.hardwareConcurrency,
-            quality: 10,
-            width,
-            height,
-            workerScript: 'gif.worker.js',
-          });
-
-          canvas.width = `${width}`;
-          canvas.height = `${height}`;
-        }
-
-        ctx.drawImage(video, 0, 0);
-        const now = new Date().getTime();
-
-        if (!first) {
-          delay = now - timestamp;
-          timestamp = now;
-        }
-
-        this.recording.gif.addFrame(ctx, { copy: true, delay: first ? undefined : delay });
-
-        first = false;
-      } catch (err) {
-        if (err) {
-          throw err;
-        }
+      if (video.videoWidth === 0) {
+        return;
       }
+
+      if (typeof this.recording.width === 'undefined') {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        this.recording.width = width;
+        this.recording.height = height;
+        canvas.width = `${width}`;
+        canvas.height = `${height}`;
+      }
+
+      ctx.drawImage(video, 0, 0);
+
+      this.recording.frames.push({
+        frame: ctx.getImageData(0, 0, this.recording.width, this.recording.height),
+        timestamp: new Date().getTime()
+      });
     }, 100);
 
     const redrawInterval = setInterval(() => m.redraw(), 1000);
@@ -217,13 +199,16 @@ class App {
     track.addEventListener('ended', endedListener);
 
     this.recording = {
-      gif: undefined,
+      width: undefined,
+      height: undefined,
+      frames: [],
       stop: () => {
         clearInterval(frameInterval);
         clearInterval(redrawInterval);
         track.removeEventListener('ended', endedListener);
         track.stop();
-      }
+      },
+      cancel: () => null
     };
   }
 
@@ -238,7 +223,15 @@ class App {
     this.recording.stop();
     this.renderingProgress = 0;
 
-    this.recording.gif.on('progress', progress => {
+    const gif = new GIF({
+      workers: navigator.hardwareConcurrency,
+      quality: 10,
+      width: this.recording.width,
+      height: this.recording.height,
+      workerScript: 'gif.worker.js',
+    });
+
+    gif.on('progress', progress => {
       this.renderingProgress = progress;
       m.redraw();
     });
@@ -249,7 +242,7 @@ class App {
       m.redraw();
     };
 
-    this.recording.gif.once('finished', blob => {
+    gif.once('finished', blob => {
       this.state = 'idle';
       this.recorded = {
         duration,
@@ -259,12 +252,20 @@ class App {
       done();
     });
 
-    this.recording.gif.once('abort', () => {
+    gif.once('abort', () => {
       this.state = 'idle';
       done();
     });
 
-    this.recording.gif.render();
+    let previous = undefined;
+
+    for (const { frame, timestamp } of this.recording.frames) {
+      gif.addFrame(frame, { delay: previous && timestamp - previous });
+      previous = timestamp;
+    }
+
+    this.recording.cancel = () => gif.abort();
+    gif.render();
   }
 
   cancelRecording() {
@@ -272,7 +273,7 @@ class App {
       return;
     }
 
-    this.recording.gif.abort();
+    this.recording.cancel();
   }
 
   clearRecording() {
