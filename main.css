@@ -26,12 +26,7 @@ body {
   color: #333;
 }
 
-canvas {
-  display: none;
-  width: 600px;
-}
-
-video {
+.hidden {
   display: none;
 }
 
@@ -111,7 +106,7 @@ button > img {
   text-align: center;
 }
 
-img.recording {
+.recording {
   max-width: 50vw;
   max-height: 50vh;
   display: block;

@@ -70,9 +70,16 @@ class App {
       ];
     }
 
+    if (this.state === 'preview') {
+      return [
+        m(Button, { label: 'Render', icon: 'gear', onclick: () => this.startRendering(), primary: true }),
+        m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.discardPreview() })
+      ];
+    }
+
     if (this.state === 'rendering') {
       return [
-        m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.cancelRecording() })
+        m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.cancelRendering() })
       ];
     }
   }
@@ -107,8 +114,14 @@ class App {
     if (this.state === 'recording') {
       return m('div', [
         m(Timer, { duration: typeof this.recordingStartTime === 'number' ? new Date().getTime() - this.recordingStartTime : 0 }),
-        m('canvas', { width: 640, height: 480 }),
-        m('video', { autoplay: true, playsinline: true }),
+        m('canvas.hidden', { width: 640, height: 480 }),
+        m('video.hidden', { autoplay: true, playsinline: true }),
+      ]);
+    }
+
+    if (this.state === 'preview') {
+      return m('div', [
+        m('canvas.recording', { width: 640, height: 480 }),
       ]);
     }
 
@@ -124,6 +137,11 @@ class App {
       const video = vnode.dom.getElementsByTagName('video')[0];
       const canvas = vnode.dom.getElementsByTagName('canvas')[0];
       this._startRecording(video, canvas);
+    }
+
+    if (this.state === 'preview' && this.preview === undefined) {
+      const canvas = vnode.dom.getElementsByTagName('canvas')[0];
+      this._startPreview(canvas);
     }
   }
 
@@ -175,7 +193,7 @@ class App {
       ctx.drawImage(video, 0, 0);
 
       this.recording.frames.push({
-        frame: ctx.getImageData(0, 0, this.recording.width, this.recording.height),
+        imageData: ctx.getImageData(0, 0, this.recording.width, this.recording.height),
         timestamp: new Date().getTime()
       });
     }, 100);
@@ -191,11 +209,12 @@ class App {
       width: undefined,
       height: undefined,
       frames: [],
-      stop: () => {
+      stop() {
         clearInterval(frameInterval);
         clearInterval(redrawInterval);
         track.removeEventListener('ended', endedListener);
         track.stop();
+        m.redraw();
       },
       cancel: () => null
     };
@@ -206,10 +225,65 @@ class App {
       return;
     }
 
-    this.state = 'rendering';
-
-    const duration = new Date() - this.recordingStartTime;
+    this.state = 'preview';
     this.recording.stop();
+  }
+
+  _startPreview(canvas) {
+    canvas.width = this.recording.width;
+    canvas.height = this.recording.height;
+
+    const ctx = canvas.getContext('2d');
+
+    const firstTimestamp = this.recording.frames[0].timestamp;
+    let start = new Date().getTime();
+    let animationFrame = undefined;
+    let index = 0;
+
+    const draw = () => {
+      const frame = this.recording.frames[index];
+
+      if (index === 0 || frame.timestamp - firstTimestamp <= new Date().getTime() - start) {
+        ctx.putImageData(frame.imageData, 0, 0);
+
+        if (++index === this.recording.frames.length) {
+          index = 0;
+          start = new Date().getTime();
+        }
+      }
+
+      animationFrame = requestAnimationFrame(draw);
+    };
+
+    animationFrame = requestAnimationFrame(draw);
+
+    this.preview = {
+      stop: () => {
+        cancelAnimationFrame(animationFrame);
+        this.preview = undefined;
+      }
+    };
+  }
+
+  discardPreview() {
+    if (this.state !== 'preview') {
+      return;
+    }
+
+    this.preview.stop();
+    this.state = 'idle';
+    this.recording = undefined;
+    this.recordingStartTime = undefined;
+  }
+
+  startRendering() {
+    if (this.state !== 'preview') {
+      return;
+    }
+
+    this.state = 'rendering';
+    const duration = new Date() - this.recordingStartTime;
+    this.preview.stop();
     this.renderingProgress = 0;
 
     const gif = new GIF({
@@ -248,8 +322,8 @@ class App {
 
     let previous = undefined;
 
-    for (const { frame, timestamp } of this.recording.frames) {
-      gif.addFrame(frame, { delay: previous && timestamp - previous });
+    for (const { imageData, timestamp } of this.recording.frames) {
+      gif.addFrame(imageData, { delay: previous && timestamp - previous });
       previous = timestamp;
     }
 
@@ -257,7 +331,7 @@ class App {
     gif.render();
   }
 
-  cancelRecording() {
+  cancelRendering() {
     if (this.state !== 'rendering') {
       return;
     }
