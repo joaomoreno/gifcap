@@ -57,7 +57,6 @@ class RecordingState extends State {
     super();
 
     this.recording = {
-      startTime: undefined,
       duration: undefined,
       width: undefined,
       height: undefined,
@@ -89,6 +88,7 @@ class Recorder {
   constructor(vnode) {
     this.app = vnode.attrs.app;
     this.recording = this.app.state.recording;
+    this.startTime = undefined;
   }
 
   async oncreate(vnode) {
@@ -109,7 +109,7 @@ class Recorder {
     video.srcObject = captureStream;
 
     const ctx = canvas.getContext('2d');
-    this.recording.startTime = new Date().getTime();
+    this.startTime = new Date().getTime();
 
     const frameInterval = setInterval(async () => {
       if (video.videoWidth === 0) {
@@ -144,7 +144,7 @@ class Recorder {
     track.addEventListener('ended', endedListener);
 
     this.onbeforeremove = () => {
-      this.recording.duration = new Date() - this.recording.startTime;
+      this.recording.duration = new Date() - this.startTime;
       clearInterval(frameInterval);
       clearInterval(redrawInterval);
       track.removeEventListener('ended', endedListener);
@@ -156,7 +156,7 @@ class Recorder {
 
   view() {
     return m('div', [
-      m(Timer, { duration: typeof this.recording.startTime === 'number' ? new Date().getTime() - this.recording.startTime : 0 }),
+      m(Timer, { duration: typeof this.startTime === 'number' ? new Date().getTime() - this.startTime : 0 }),
       m('canvas.hidden', { width: 640, height: 480 }),
       m('video.hidden', { autoplay: true, playsinline: true }),
     ]);
