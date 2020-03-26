@@ -335,7 +335,7 @@ class App {
         return [
           m('p', 'Create animated GIFs from a screen recording.'),
           m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
-          isMobile ? m('p', 'Sorry, no mobile support.') : undefined,
+          isMobile ? m('p', 'Sorry, mobile does not support screen recording.') : undefined,
           isMobile ? undefined : m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.startRecording(), primary: true }),
         ];
       }
