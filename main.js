@@ -13,12 +13,7 @@ function humanSize(size) {
   }
 
   size = Math.round(size / 1024);
-
-  if (size < 1024) {
-    return `${size} KB`
-  } else {
-    return `${Math.floor(size / 1024 * 100) / 100} MB`;
-  }
+  return size < 1024 ? `${size} KB` : `${Math.floor(size / 1024 * 100) / 100} MB`;
 }
 
 const Button = {
