@@ -34,138 +34,74 @@ const Timer = {
   }
 };
 
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+// State
 
-class App {
+class State {
+
+  is(StateClass) {
+    return this instanceof StateClass;
+  }
+}
+
+class IdleState extends State {
+
+  constructor(recording) {
+    super();
+    this.recording = recording;
+  }
+}
+
+class RecordingState extends State {
 
   constructor() {
-    this.state = 'idle';
-    window.onbeforeunload = () => this.state === 'recording' || this.state === 'rendering' || this.recorded ? '' : null;
+    super();
+
+    this.recording = {
+      startTime: undefined,
+      duration: undefined,
+      width: undefined,
+      height: undefined,
+      frames: []
+    };
+  }
+}
+
+class PreviewState extends State {
+
+  constructor(recording) {
+    super();
+    this.recording = recording;
+  }
+}
+
+class RenderingState extends State {
+
+  constructor(recording) {
+    super();
+    this.recording = recording;
+  }
+}
+
+// App
+
+class Recorder {
+
+  constructor(vnode) {
+    this.app = vnode.attrs.app;
+    this.recording = this.app.state.recording;
   }
 
-  view() {
-    return [
-      m('section', { class: 'app' }, [
-        m('section', { class: 'content' }, this.contentView()),
-        m('section', { class: 'actions' }, this.actionsView())
-      ])
-    ];
-  }
+  async oncreate(vnode) {
+    const video = vnode.dom.getElementsByTagName('video')[0];
+    const canvas = vnode.dom.getElementsByTagName('canvas')[0];
 
-  actionsView() {
-    if (isMobile) {
-      return [];
-    }
-
-    if (this.state === 'idle') {
-      return [
-        this.recorded && m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.startRecording(), primary: true }),
-        this.recorded && m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.clearRecording() })
-      ];
-    }
-
-    if (this.state === 'recording') {
-      return [
-        m(Button, { label: 'Stop', icon: 'primitive-square', onclick: () => this.stopRecording() })
-      ];
-    }
-
-    if (this.state === 'preview') {
-      return [
-        m(Button, { label: 'Render', icon: 'gear', onclick: () => this.startRendering(), primary: true }),
-        m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.discardPreview() })
-      ];
-    }
-
-    if (this.state === 'rendering') {
-      return [
-        m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.cancelRendering() })
-      ];
-    }
-  }
-
-  contentView() {
-    if (this.state === 'idle') {
-      if (this.recorded) {
-        return m('div.recording-card', [
-          m('a', { href: this.recorded.url, target: '_blank' }, [
-            m('img.recording', { src: this.recorded.url })
-          ]),
-          m('footer', [
-            m(Timer, { duration: this.recorded.duration }),
-            m('span.tag.is-small', [
-              m('a.recording-detail', { href: this.recorded.url, target: '_blank' }, [
-                m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
-                humanSize(this.recorded.size)
-              ])
-            ]),
-          ]),
-        ]);
-      } else {
-        return [
-          m('p', 'Create animated GIFs from a screen recording.'),
-          m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
-          isMobile ? m('p', 'Sorry, no mobile support.') : undefined,
-          isMobile ? undefined : m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.startRecording(), primary: true }),
-        ];
-      }
-    }
-
-    if (this.state === 'recording') {
-      return m('div', [
-        m(Timer, { duration: typeof this.recordingStartTime === 'number' ? new Date().getTime() - this.recordingStartTime : 0 }),
-        m('canvas.hidden', { width: 640, height: 480 }),
-        m('video.hidden', { autoplay: true, playsinline: true }),
-      ]);
-    }
-
-    if (this.state === 'preview') {
-      return m('div', [
-        m('canvas.recording', { width: 640, height: 480 }),
-      ]);
-    }
-
-    if (this.state === 'rendering') {
-      return m('div', [
-        m('progress', { max: '1', value: this.renderingProgress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.renderingProgress * 100)}%`),
-      ]);
-    }
-  }
-
-  onupdate(vnode) {
-    if (this.state === 'recording' && this.recording === undefined) {
-      const video = vnode.dom.getElementsByTagName('video')[0];
-      const canvas = vnode.dom.getElementsByTagName('canvas')[0];
-      this._startRecording(video, canvas);
-    }
-
-    if (this.state === 'preview' && this.preview === undefined) {
-      const canvas = vnode.dom.getElementsByTagName('canvas')[0];
-      this._startPreview(canvas);
-    }
-  }
-
-  startRecording() {
-    if (this.state !== 'idle') {
-      return;
-    }
-
-    if (this.recorded && !window.confirm('This will discard the current recording, are you sure you want to continue?')) {
-      return;
-    }
-
-    this.recorded = undefined;
-    this.state = 'recording';
-  }
-
-  async _startRecording(video, canvas) {
     let captureStream;
 
     try {
       captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
     } catch (err) {
       console.error(err);
-      this.state = 'idle';
+      this.app.cancelRecording();
       m.redraw();
       return;
     }
@@ -173,7 +109,7 @@ class App {
     video.srcObject = captureStream;
 
     const ctx = canvas.getContext('2d');
-    this.recordingStartTime = new Date().getTime();
+    this.recording.startTime = new Date().getTime();
 
     const frameInterval = setInterval(async () => {
       if (video.videoWidth === 0) {
@@ -199,37 +135,44 @@ class App {
     }, 100);
 
     const redrawInterval = setInterval(() => m.redraw(), 1000);
-    m.redraw();
 
     const track = captureStream.getVideoTracks()[0];
-    const endedListener = () => this.stopRecording();
+    const endedListener = () => {
+      this.app.stopRecording();
+      m.redraw();
+    };
     track.addEventListener('ended', endedListener);
 
-    this.recording = {
-      width: undefined,
-      height: undefined,
-      frames: [],
-      stop() {
-        clearInterval(frameInterval);
-        clearInterval(redrawInterval);
-        track.removeEventListener('ended', endedListener);
-        track.stop();
-        m.redraw();
-      },
-      cancel: () => null
+    this.onbeforeremove = () => {
+      this.recording.duration = new Date() - this.recording.startTime;
+      clearInterval(frameInterval);
+      clearInterval(redrawInterval);
+      track.removeEventListener('ended', endedListener);
+      track.stop();
     };
+
+    m.redraw();
   }
 
-  stopRecording() {
-    if (this.state !== 'recording') {
-      return;
-    }
+  view() {
+    return m('div', [
+      m(Timer, { duration: typeof this.recording.startTime === 'number' ? new Date().getTime() - this.recording.startTime : 0 }),
+      m('canvas.hidden', { width: 640, height: 480 }),
+      m('video.hidden', { autoplay: true, playsinline: true }),
+    ]);
+  }
+}
 
-    this.state = 'preview';
-    this.recording.stop();
+class Previewer {
+
+  constructor(vnode) {
+    this.app = vnode.attrs.app;
+    this.recording = this.app.state.recording;
   }
 
-  _startPreview(canvas) {
+  async oncreate(vnode) {
+    const canvas = vnode.dom.getElementsByTagName('canvas')[0];
+
     canvas.width = this.recording.width;
     canvas.height = this.recording.height;
 
@@ -257,35 +200,27 @@ class App {
 
     animationFrame = requestAnimationFrame(draw);
 
-    this.preview = {
-      stop: () => {
-        cancelAnimationFrame(animationFrame);
-        this.preview = undefined;
-      }
+    this.onbeforeremove = () => {
+      cancelAnimationFrame(animationFrame);
     };
   }
 
-  discardPreview() {
-    if (this.state !== 'preview') {
-      return;
-    }
+  view() {
+    return m('div', [
+      m('canvas.recording', { width: 640, height: 480 }),
+    ]);
+  }
+}
 
-    this.preview.stop();
-    this.state = 'idle';
-    this.recording = undefined;
-    this.recordingStartTime = undefined;
+class Renderer {
+
+  constructor(vnode) {
+    this.app = vnode.attrs.app;
+    this.recording = this.app.state.recording;
+    this.progress = 0;
   }
 
-  startRendering() {
-    if (this.state !== 'preview') {
-      return;
-    }
-
-    this.state = 'rendering';
-    const duration = new Date() - this.recordingStartTime;
-    this.preview.stop();
-    this.renderingProgress = 0;
-
+  async oncreate() {
     const gif = new GIF({
       workers: navigator.hardwareConcurrency,
       quality: 10,
@@ -295,29 +230,17 @@ class App {
     });
 
     gif.on('progress', progress => {
-      this.renderingProgress = progress;
+      this.progress = progress;
       m.redraw();
     });
-
-    const done = () => {
-      this.recording = undefined;
-      this.recordingStartTime = undefined;
-      m.redraw();
-    };
 
     gif.once('finished', blob => {
-      this.state = 'idle';
-      this.recorded = {
-        duration,
+      this.app.setRenderedRecording({
+        duration: this.recording.duration,
         size: blob.size,
         url: URL.createObjectURL(blob),
-      };
-      done();
-    });
-
-    gif.once('abort', () => {
-      this.state = 'idle';
-      done();
+      });
+      m.redraw();
     });
 
     let previous = undefined;
@@ -327,20 +250,176 @@ class App {
       previous = timestamp;
     }
 
-    this.recording.cancel = () => gif.abort();
+    this.onbeforeremove = () => {
+      gif.abort();
+    };
+
     gif.render();
   }
 
-  cancelRendering() {
-    if (this.state !== 'rendering') {
+  view() {
+    return m('div', [
+      m('progress', { max: '1', value: this.progress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.progress * 100)}%`),
+    ]);
+  }
+}
+
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+class App {
+
+  constructor() {
+    this.state = new IdleState();
+    window.onbeforeunload = () => this.state.is(RecordingState) || this.state.is(RenderingState) || (this.state.is(IdleState) && this.state.recording) ? '' : null;
+  }
+
+  view() {
+    return [
+      m('section', { class: 'app' }, [
+        m('section', { class: 'content' }, this.contentView()),
+        m('section', { class: 'actions' }, this.actionsView())
+      ])
+    ];
+  }
+
+  actionsView() {
+    if (isMobile) {
+      return [];
+    }
+
+    if (this.state.is(IdleState)) {
+      return [
+        this.state.recording && m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.startRecording(), primary: true }),
+        this.state.recording && m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.clearRecording() })
+      ];
+    }
+
+    if (this.state.is(RecordingState)) {
+      return [
+        m(Button, { label: 'Stop', icon: 'primitive-square', onclick: () => this.stopRecording() })
+      ];
+    }
+
+    if (this.state.is(PreviewState)) {
+      return [
+        m(Button, { label: 'Render', icon: 'gear', onclick: () => this.startRendering(), primary: true }),
+        m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.discardPreview() })
+      ];
+    }
+
+    if (this.state.is(RenderingState)) {
+      return [
+        m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.cancelRendering() })
+      ];
+    }
+  }
+
+  contentView() {
+    if (this.state.is(IdleState)) {
+      if (this.state.recording) {
+        return m('div.recording-card', [
+          m('a', { href: this.state.recording.url, target: '_blank' }, [
+            m('img.recording', { src: this.state.recording.url })
+          ]),
+          m('footer', [
+            m(Timer, { duration: this.state.recording.duration }),
+            m('span.tag.is-small', [
+              m('a.recording-detail', { href: this.state.recording.url, target: '_blank' }, [
+                m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
+                humanSize(this.state.recording.size)
+              ])
+            ]),
+          ]),
+        ]);
+      } else {
+        return [
+          m('p', 'Create animated GIFs from a screen recording.'),
+          m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
+          isMobile ? m('p', 'Sorry, no mobile support.') : undefined,
+          isMobile ? undefined : m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.startRecording(), primary: true }),
+        ];
+      }
+    }
+
+    if (this.state.is(RecordingState)) {
+      return m(Recorder, { app: this });
+    }
+
+    if (this.state.is(PreviewState)) {
+      return m(Previewer, { app: this });
+    }
+
+    if (this.state.is(RenderingState)) {
+      return m(Renderer, { app: this });
+    }
+  }
+
+  startRecording() {
+    if (!this.state.is(IdleState)) {
       return;
     }
 
-    this.recording.cancel();
+    if (this.state.recording && !window.confirm('This will discard the current recording, are you sure you want to continue?')) {
+      return;
+    }
+
+    this.state = new RecordingState();
+  }
+
+  stopRecording() {
+    if (!this.state.is(RecordingState)) {
+      return;
+    }
+
+    this.state = new PreviewState(this.state.recording);
+  }
+
+  cancelRecording() {
+    if (!this.state.is(RecordingState)) {
+      return;
+    }
+
+    this.state = new IdleState();
+  }
+
+  discardPreview() {
+    if (!this.state.is(PreviewState)) {
+      return;
+    }
+
+    this.state = new IdleState();
+  }
+
+  startRendering() {
+    if (!this.state.is(PreviewState)) {
+      return;
+    }
+
+    this.state = new RenderingState(this.state.recording);
+  }
+
+  cancelRendering() {
+    if (!this.state.is(RenderingState)) {
+      return;
+    }
+
+    this.state = new IdleState();
+  }
+
+  setRenderedRecording(recording) {
+    if (!this.state.is(RenderingState)) {
+      return;
+    }
+
+    this.state = new IdleState(recording);
   }
 
   clearRecording() {
-    this.recorded = undefined;
+    if (!this.state.is(IdleState)) {
+      return;
+    }
+
+    this.state = new IdleState();
   }
 }
 
