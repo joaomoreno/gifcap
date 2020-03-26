@@ -129,3 +129,29 @@ button > img {
 .tag img {
   margin-right: 0.3em;
 }
+
+.preview {
+  position: relative;
+}
+
+.crop {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.crop-handle {
+  width: 10px;
+  height: 10px;
+  background: red;
+  position: absolute;
+  cursor: all-scroll;
+}
+
+.crop-handle.top { top: -1px; width: 100%; height: 3px; cursor: n-resize; }
+.crop-handle.bottom { bottom: -1px; width: 100%; height: 3px; cursor: n-resize; }
+.crop-handle.left { left: -1px; width: 3px; height: 100%; cursor: w-resize; }
+.crop-handle.right { right: -1px; width: 3px; height: 100%; cursor: w-resize; }
+.crop-handle.tl { top: -5px; left: -5px; }
+.crop-handle.tr { top: -5px; right: -5px; }
+.crop-handle.bl { bottom: -5px; left: -5px; }
+.crop-handle.br { bottom: -5px; right: -5px; }

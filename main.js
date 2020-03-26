@@ -168,14 +168,16 @@ class Previewer {
   constructor(vnode) {
     this.app = vnode.attrs.app;
     this.recording = this.app.state.recording;
+    this.crop = {
+      top: 0,
+      left: 0,
+      width: this.recording.width,
+      height: this.recording.height
+    };
   }
 
   async oncreate(vnode) {
     const canvas = vnode.dom.getElementsByTagName('canvas')[0];
-
-    canvas.width = this.recording.width;
-    canvas.height = this.recording.height;
-
     const ctx = canvas.getContext('2d');
 
     const firstTimestamp = this.recording.frames[0].timestamp;
@@ -206,9 +208,77 @@ class Previewer {
   }
 
   view() {
-    return m('div', [
-      m('canvas.recording', { width: 640, height: 480 }),
+    return m('.preview', [
+      m('.crop', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
+        m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
+        m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
+        m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
+        m('.crop-handle.right', { onmousedown: e => this.onMouseDown(['right'], e) }),
+        m('.crop-handle.tl', { onmousedown: e => this.onMouseDown(['top', 'left'], e) }),
+        m('.crop-handle.tr', { onmousedown: e => this.onMouseDown(['top', 'right'], e) }),
+        m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
+        m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
+      ]),
+      m('canvas.recording', { width: this.recording.width, height: this.recording.height }),
     ]);
+  }
+
+  onMouseDown(directions, event) {
+    const start = {
+      top: this.crop.top,
+      left: this.crop.left,
+      width: this.crop.width,
+      height: this.crop.height,
+      bottom: this.crop.top + this.crop.height,
+      right: this.crop.left + this.crop.width,
+      screenX: event.screenX,
+      screenY: event.screenY,
+    };
+
+    const handlers = {
+      top: e => {
+        const diff = e.screenY - start.screenY;
+        const top = Math.max(0, Math.min(start.bottom - 5, start.top + diff));
+        const delta = top - start.top;
+        this.crop.top = top;
+        this.crop.height = start.height - delta;
+      },
+      bottom: e => {
+        const diff = e.screenY - start.screenY;
+        const height = Math.max(5, Math.min(this.recording.height - start.top, start.height + diff));
+        this.crop.height = height;
+      },
+      left: e => {
+        const diff = e.screenX - start.screenX;
+        const left = Math.max(0, Math.min(start.right - 5, start.left + diff));
+        const delta = left - start.left;
+        this.crop.left = left;
+        this.crop.width = start.width - delta;
+      },
+      right: e => {
+        const diff = e.screenX - start.screenX;
+        const width = Math.max(5, Math.min(this.recording.width - start.left, start.width + diff));
+        this.crop.width = width;
+      }
+    };
+
+    const onMouseMove = e => {
+      for (const direction of directions) {
+        handlers[direction](e);
+      }
+
+      m.redraw();
+    };
+
+    const onMouseUp = () => {
+      document.body.removeEventListener('mousemove', onMouseMove);
+      document.body.removeEventListener('mouseup', onMouseUp);
+      m.redraw();
+    };
+
+    event.preventDefault();
+    document.body.addEventListener('mousemove', onMouseMove);
+    document.body.addEventListener('mouseup', onMouseUp);
   }
 }
 
