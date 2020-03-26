@@ -238,26 +238,26 @@ class Previewer {
     const handlers = {
       top: e => {
         const diff = e.screenY - start.screenY;
-        const top = Math.max(0, Math.min(start.bottom - 5, start.top + diff));
+        const top = Math.max(0, Math.min(start.bottom - 20, start.top + diff));
         const delta = top - start.top;
         this.crop.top = top;
         this.crop.height = start.height - delta;
       },
       bottom: e => {
         const diff = e.screenY - start.screenY;
-        const height = Math.max(5, Math.min(this.recording.height - start.top, start.height + diff));
+        const height = Math.max(20, Math.min(this.recording.height - start.top, start.height + diff));
         this.crop.height = height;
       },
       left: e => {
         const diff = e.screenX - start.screenX;
-        const left = Math.max(0, Math.min(start.right - 5, start.left + diff));
+        const left = Math.max(0, Math.min(start.right - 20, start.left + diff));
         const delta = left - start.left;
         this.crop.left = left;
         this.crop.width = start.width - delta;
       },
       right: e => {
         const diff = e.screenX - start.screenX;
-        const width = Math.max(5, Math.min(this.recording.width - start.left, start.width + diff));
+        const width = Math.max(20, Math.min(this.recording.width - start.left, start.width + diff));
         this.crop.width = width;
       }
     };
