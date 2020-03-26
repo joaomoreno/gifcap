@@ -21,6 +21,15 @@ function humanSize(size) {
   }
 }
 
+const Button = {
+  view(vnode) {
+    return m('button', { class: `button ${vnode.attrs.primary ? 'primary' : 'secondary'}`, onclick: vnode.attrs.onclick }, [
+      m('img', { src: `https://icongr.am/octicons/${vnode.attrs.icon}.svg?size=16&color=ffffff` }),
+      vnode.attrs.label
+    ]);
+  }
+};
+
 const Timer = {
   view(vnode) {
     return m('span.tag.is-small', [
@@ -55,32 +64,20 @@ class App {
 
     if (this.state === 'idle') {
       return [
-        this.recorded && m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
-          'Start Recording'
-        ]),
-        this.recorded && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/trashcan.svg?size=16&color=ffffff' }),
-          'Discard'
-        ])
+        this.recorded && m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.startRecording(), primary: true }),
+        this.recorded && m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.clearRecording() })
       ];
     }
 
     if (this.state === 'recording') {
       return [
-        m('button', { class: 'button secondary', onclick: () => this.stopRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
-          'Stop'
-        ])
+        m(Button, { label: 'Stop', icon: 'primitive-square', onclick: () => this.stopRecording() })
       ];
     }
 
     if (this.state === 'rendering') {
       return [
-        m('button', { class: 'button secondary', onclick: () => this.cancelRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
-          'Cancel'
-        ])
+        m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.cancelRecording() })
       ];
     }
   }
@@ -107,10 +104,7 @@ class App {
           m('p', 'Create animated GIFs from a screen recording.'),
           m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
           isMobile ? m('p', 'Sorry, no mobile support.') : undefined,
-          isMobile ? undefined : m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
-            m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
-            'Start Recording'
-          ])
+          isMobile ? undefined : m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.startRecording(), primary: true }),
         ];
       }
     }
