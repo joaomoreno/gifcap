@@ -174,16 +174,46 @@ button:not(.icon-only) > img {
 .crop-handle.bl { bottom: -5px; left: -5px; }
 .crop-handle.br { bottom: -5px; right: -5px; }
 
-input[type="range"] {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+.playbar {
+  flex: 1;
+  margin: 0 10px;
+  position: relative;
 }
 
-input[type="range"]:disabled {
+.playbar > input {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  height: 50%;
+  margin: 0;
+}
+
+.playbar > input:disabled {
   opacity: 1;
 }
 
-.playbar {
-  flex: 1;
-  padding: 0 10px;
+.playbar > .trim-bar {
+  border-top: 2px solid #AD2C2C;
+  position: absolute;
+  top: calc(50% + 4px);
+}
+
+.playbar > .trim-bar > .trim-start, 
+.playbar > .trim-bar > .trim-end {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border: 6px solid #AD2C2C;
+  border-bottom-color: transparent;
+}
+
+.playbar > .trim-bar > .trim-start {
+  top: 0;
+  left: 0;
+  border-right-color: transparent;
+}
+
+.playbar > .trim-bar > .trim-end {
+  top: 0;
+  right: 0;
+  border-left-color: transparent;
 }

@@ -223,6 +223,10 @@ class PreviewView {
       m(Button, { title: 'Trim end to current position', iconset: 'material', icon: 'format-horizontal-align-right', outline: this.trim.end === this.recording.frames.length - 1, disabled: this.isPlaying || this.playback.index <= this.trim.start || (this.playback.index === this.recording.frames.length - 1 && this.trim.end === this.recording.frames.length - 1), onclick: () => this.trimEnd() }),
       m('.playbar', [
         m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
+        m('.trim-bar', { style: { left: `${this.trim.start * 100 / (this.recording.frames.length - 1)}%`, width: `${(this.trim.end - this.trim.start) * 100 / (this.recording.frames.length - 1)}%` } }, [
+          m('.trim-start'),
+          m('.trim-end'),
+        ])
       ]),
       m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(), primary: true }),
