@@ -157,3 +157,8 @@ button > img {
 .crop-handle.tr { top: -5px; right: -5px; }
 .crop-handle.bl { bottom: -5px; left: -5px; }
 .crop-handle.br { bottom: -5px; right: -5px; }
+
+input[type="range"] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}

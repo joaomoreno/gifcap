@@ -168,6 +168,13 @@ class Previewer {
   constructor(vnode) {
     this.app = vnode.attrs.app;
     this.recording = this.app.state.recording;
+    this.canvas = undefined;
+
+    this.playback = {
+      index: undefined,
+      disposable: undefined
+    };
+
     this.crop = {
       top: 0,
       left: 0,
@@ -176,47 +183,32 @@ class Previewer {
     };
   }
 
-  async oncreate(vnode) {
-    const canvas = vnode.dom.getElementsByTagName('canvas')[0];
-    const ctx = canvas.getContext('2d');
+  get isPlaying() { return !!this.playback.disposable; }
 
-    const duration = this.recording.frames.length * FRAME_DELAY;
-    const start = new Date().getTime();
+  oncreate(vnode) {
+    this.canvas = vnode.dom.getElementsByTagName('canvas')[0];
+    this.play();
+  }
 
-    let animationFrame = undefined;
-    let lastIndex;
-
-    const draw = () => {
-      const index = Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
-
-      if (lastIndex !== index) {
-        ctx.putImageData(this.recording.frames[index], 0, 0);
-      }
-
-      lastIndex = index;
-      animationFrame = requestAnimationFrame(draw);
-    };
-
-    animationFrame = requestAnimationFrame(draw);
-
-    this.onbeforeremove = () => {
-      cancelAnimationFrame(animationFrame);
-    };
+  onbeforeremove() {
+    this.pause();
   }
 
   view() {
     return m('.preview', [
-      m('.crop', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
-        m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
-        m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
-        m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
-        m('.crop-handle.right', { onmousedown: e => this.onMouseDown(['right'], e) }),
-        m('.crop-handle.tl', { onmousedown: e => this.onMouseDown(['top', 'left'], e) }),
-        m('.crop-handle.tr', { onmousedown: e => this.onMouseDown(['top', 'right'], e) }),
-        m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
-        m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
-      ]),
+      // m('.crop', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
+      //   m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
+      //   m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
+      //   m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
+      //   m('.crop-handle.right', { onmousedown: e => this.onMouseDown(['right'], e) }),
+      //   m('.crop-handle.tl', { onmousedown: e => this.onMouseDown(['top', 'left'], e) }),
+      //   m('.crop-handle.tr', { onmousedown: e => this.onMouseDown(['top', 'right'], e) }),
+      //   m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
+      //   m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
+      // ]),
       m('canvas.recording', { width: this.recording.width, height: this.recording.height }),
+      m(Button, { label: 'Play/Pause', icon: 'play', onclick: () => this.togglePlayPause() }),
+      m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) })
     ]);
   }
 
@@ -276,6 +268,59 @@ class Previewer {
     event.preventDefault();
     document.body.addEventListener('mousemove', onMouseMove);
     document.body.addEventListener('mouseup', onMouseUp);
+  }
+
+  onSliderInput(e) {
+    this.playback.index = e.target.value;
+
+    const ctx = this.canvas.getContext('2d');
+    ctx.putImageData(this.recording.frames[this.playback.index], 0, 0);
+  }
+
+  play() {
+    if (this.isPlaying) {
+      return;
+    }
+
+    const ctx = this.canvas.getContext('2d');
+    const duration = this.recording.frames.length * FRAME_DELAY;
+    const start = new Date().getTime() - ((this.playback.index || 0) * FRAME_DELAY);
+    let animationFrame = undefined;
+
+    const draw = () => {
+      const index = Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
+
+      if (this.playback.index !== index) {
+        ctx.putImageData(this.recording.frames[index], 0, 0);
+        m.redraw();
+      }
+
+      this.playback.index = index;
+      animationFrame = requestAnimationFrame(draw);
+    };
+
+    animationFrame = requestAnimationFrame(draw);
+
+    this.playback.disposable = () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }
+
+  pause() {
+    if (!this.isPlaying) {
+      return;
+    }
+
+    this.playback.disposable();
+    this.playback.disposable = undefined;
+  }
+
+  togglePlayPause() {
+    if (this.isPlaying) {
+      this.pause();
+    } else {
+      this.play();
+    }
   }
 }
 
@@ -384,7 +429,7 @@ class App {
   contentView() {
     if (this.state.is(IdleState)) {
       if (this.state.recording) {
-        return m('div.recording-card', [
+        return m('.recording-card', [
           m('a', { href: this.state.recording.url, target: '_blank' }, [
             m('img.recording', { src: this.state.recording.url })
           ]),
