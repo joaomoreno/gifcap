@@ -57,7 +57,6 @@ class RecordingState extends State {
     super();
 
     this.recording = {
-      duration: undefined,
       width: undefined,
       height: undefined,
       frames: []
@@ -116,7 +115,9 @@ class Recorder {
         return;
       }
 
-      if (typeof this.recording.width === 'undefined') {
+      const first = typeof this.recording.width === 'undefined';
+
+      if (first) {
         const width = video.videoWidth;
         const height = video.videoHeight;
 
@@ -130,7 +131,7 @@ class Recorder {
 
       this.recording.frames.push({
         imageData: ctx.getImageData(0, 0, this.recording.width, this.recording.height),
-        timestamp: new Date().getTime()
+        timestamp: first ? 0 : new Date().getTime() - this.startTime
       });
     }, 100);
 
@@ -144,7 +145,6 @@ class Recorder {
     track.addEventListener('ended', endedListener);
 
     this.onbeforeremove = () => {
-      this.recording.duration = new Date() - this.startTime;
       clearInterval(frameInterval);
       clearInterval(redrawInterval);
       track.removeEventListener('ended', endedListener);
@@ -178,8 +178,8 @@ class Previewer {
 
   async oncreate(vnode) {
     const canvas = vnode.dom.getElementsByTagName('canvas')[0];
-    const ctx = canvas.getContext('2d');
 
+    const ctx = canvas.getContext('2d');
     const firstTimestamp = this.recording.frames[0].timestamp;
     let start = new Date().getTime();
     let animationFrame = undefined;
@@ -306,7 +306,7 @@ class Renderer {
 
     gif.once('finished', blob => {
       this.app.setRenderedRecording({
-        duration: this.recording.duration,
+        duration: this.recording.frames[this.recording.frames.length - 1].timestamp,
         size: blob.size,
         url: URL.createObjectURL(blob),
       });
