@@ -3,7 +3,7 @@
 :root {
   --color-primary: #AD2C2C;
   --color-lightGrey: #d2d6dd;
-  --color-grey: #2E2E2E;
+  --color-grey: #5e5e5e;
   --color-darkGrey: #3f4144;
   --color-error: #d43939;
   --color-success: #28bd14;
@@ -177,4 +177,13 @@ button:not(.icon-only) > img {
 input[type="range"] {
   padding-left: 0 !important;
   padding-right: 0 !important;
+}
+
+input[type="range"]:disabled {
+  opacity: 1;
+}
+
+.playbar {
+  flex: 1;
+  padding: 0 10px;
 }

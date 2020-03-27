@@ -22,11 +22,12 @@ function humanSize(size) {
 const Button = {
   view(vnode) {
     return m('button', {
-      class: `button ${vnode.attrs.primary ? 'primary' : 'secondary'} ${vnode.attrs.label ? '' : 'icon-only'}`,
+      class: `button ${vnode.attrs.primary ? 'primary' : 'secondary'} ${vnode.attrs.label ? '' : 'icon-only'} ${vnode.attrs.outline ? 'outline' : ''}`,
       onclick: vnode.attrs.onclick,
-      title: vnode.attrs.title || vnode.attrs.label
+      title: vnode.attrs.title || vnode.attrs.label,
+      disabled: vnode.attrs.disabled
     }, [
-      m('img', { src: `https://icongr.am/${vnode.attrs.iconset || 'octicons'}/${vnode.attrs.icon}.svg?size=16&color=ffffff` }),
+      m('img', { src: `https://icongr.am/${vnode.attrs.iconset || 'octicons'}/${vnode.attrs.icon}.svg?size=16&color=${vnode.attrs.outline ? '333333' : 'ffffff'}` }),
       vnode.attrs.label
     ]);
   }
@@ -191,6 +192,11 @@ class PreviewView {
       disposable: undefined
     };
 
+    this.trim = {
+      start: 0,
+      end: this.recording.frames.length - 1
+    };
+
     this.crop = {
       top: 0,
       left: 0,
@@ -212,8 +218,12 @@ class PreviewView {
 
   view() {
     const actions = [
-      m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', onclick: () => this.togglePlayPause() }),
-      m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
+      m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', primary: true, onclick: () => this.togglePlayPause() }),
+      m(Button, { title: 'Trim start to current position', iconset: 'material', icon: 'format-horizontal-align-left', outline: this.trim.start === 0, disabled: this.isPlaying || this.playback.index >= this.trim.end || (this.playback.index === 0 && this.trim.start === 0), onclick: () => this.trimStart() }),
+      m(Button, { title: 'Trim end to current position', iconset: 'material', icon: 'format-horizontal-align-right', outline: this.trim.end === this.recording.frames.length - 1, disabled: this.isPlaying || this.playback.index <= this.trim.start || (this.playback.index === this.recording.frames.length - 1 && this.trim.end === this.recording.frames.length - 1), onclick: () => this.trimEnd() }),
+      m('.playbar', [
+        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
+      ]),
       m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(), primary: true }),
     ];
@@ -294,7 +304,7 @@ class PreviewView {
   }
 
   onSliderInput(e) {
-    this.playback.index = e.target.value;
+    this.playback.index = Number(e.target.value);
 
     const ctx = this.canvas.getContext('2d');
     ctx.putImageData(this.recording.frames[this.playback.index], 0, 0);
@@ -306,12 +316,12 @@ class PreviewView {
     }
 
     const ctx = this.canvas.getContext('2d');
-    const duration = this.recording.frames.length * FRAME_DELAY;
-    const start = new Date().getTime() - ((this.playback.index || 0) * FRAME_DELAY);
+    const duration = (this.trim.end - this.trim.start + 1) * FRAME_DELAY;
+    const start = this.trim.start * FRAME_DELAY + new Date().getTime() - ((this.playback.index || 0) * FRAME_DELAY);
     let animationFrame = undefined;
 
     const draw = () => {
-      const index = Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
+      const index = this.trim.start + Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
 
       if (this.playback.index !== index) {
         ctx.putImageData(this.recording.frames[index], 0, 0);
@@ -343,6 +353,22 @@ class PreviewView {
       this.pause();
     } else {
       this.play();
+    }
+  }
+
+  trimStart() {
+    if (this.trim.start === this.playback.index) {
+      this.trim.start = 0;
+    } else {
+      this.trim.start = this.playback.index;
+    }
+  }
+
+  trimEnd() {
+    if (this.trim.end === this.playback.index) {
+      this.trim.end = this.recording.frames.length - 1;
+    } else {
+      this.trim.end = this.playback.index;
     }
   }
 }
