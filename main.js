@@ -1,3 +1,6 @@
+const FPS = 10;
+const FRAME_DELAY = Math.floor(1000 / FPS);
+
 function timediff(millis) {
   const abs = Math.floor(millis / 1000);
   const mins = Math.floor(abs / 60);
@@ -13,13 +16,22 @@ function humanSize(size) {
   }
 
   size = Math.round(size / 1024);
-
-  if (size < 1024) {
-    return `${size} KB`
-  } else {
-    return `${Math.floor(size / 1024 * 100) / 100} MB`;
-  }
+  return size < 1024 ? `${size} KB` : `${Math.floor(size / 1024 * 100) / 100} MB`;
 }
+
+const Button = {
+  view(vnode) {
+    return m('button', {
+      class: `button ${vnode.attrs.primary ? 'primary' : 'secondary'} ${vnode.attrs.label ? '' : 'icon-only'} ${vnode.attrs.outline ? 'outline' : ''}`,
+      onclick: vnode.attrs.onclick,
+      title: vnode.attrs.title || vnode.attrs.label,
+      disabled: vnode.attrs.disabled
+    }, [
+      m('img', { src: `https://icongr.am/${vnode.attrs.iconset || 'octicons'}/${vnode.attrs.icon}.svg?size=16&color=${vnode.attrs.outline ? '333333' : 'ffffff'}` }),
+      vnode.attrs.label
+    ]);
+  }
+};
 
 const Timer = {
   view(vnode) {
@@ -30,135 +42,79 @@ const Timer = {
   }
 };
 
+const View = {
+  view(vnode) {
+    return [
+      m('section', { class: 'content' }, vnode.children),
+      m('section', { class: 'actions' }, vnode.attrs.actions)
+    ];
+  }
+};
+
+
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-class App {
+class IdleView {
 
-  constructor() {
-    this.state = 'idle';
-    window.onbeforeunload = () => this.state === 'recording' || this.state === 'rendering' || this.recorded ? '' : null;
+  constructor(vnode) {
+    this.app = vnode.attrs.app;
   }
 
   view() {
-    return [
-      m('section', { class: 'app' }, [
-        m('section', { class: 'content' }, this.contentView()),
-        m('section', { class: 'actions' }, this.actionsView())
-      ])
-    ];
-  }
+    let content, actions;
 
-  actionsView() {
-    if (isMobile) {
-      return [];
-    }
-
-    if (this.state === 'idle') {
-      return [
-        this.recorded && m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
-          'Start Recording'
+    if (this.app.recording) {
+      content = m('.recording-card', [
+        m('a', { href: this.app.recording.url, target: '_blank' }, [
+          m('img.recording', { src: this.app.recording.url })
         ]),
-        this.recorded && m('button', { class: 'button secondary', onclick: () => this.clearRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/trashcan.svg?size=16&color=ffffff' }),
-          'Discard'
-        ])
-      ];
-    }
-
-    if (this.state === 'recording') {
-      return [
-        m('button', { class: 'button secondary', onclick: () => this.stopRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
-          'Stop'
-        ])
-      ];
-    }
-
-    if (this.state === 'rendering') {
-      return [
-        m('button', { class: 'button secondary', onclick: () => this.cancelRecording() }, [
-          m('img', { src: 'https://icongr.am/octicons/primitive-square.svg?size=16&color=ffffff' }),
-          'Cancel'
-        ])
-      ];
-    }
-  }
-
-  contentView() {
-    if (this.state === 'idle') {
-      if (this.recorded) {
-        return m('div.recording-card', [
-          m('a', { href: this.recorded.url, target: '_blank' }, [
-            m('img.recording', { src: this.recorded.url })
+        m('footer', [
+          m(Timer, { duration: this.app.recording.duration }),
+          m('span.tag.is-small', [
+            m('a.recording-detail', { href: this.app.recording.url, target: '_blank' }, [
+              m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
+              humanSize(this.app.recording.size)
+            ])
           ]),
-          m('footer', [
-            m(Timer, { duration: this.recorded.duration }),
-            m('span.tag.is-small', [
-              m('a.recording-detail', { href: this.recorded.url, target: '_blank' }, [
-                m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
-                humanSize(this.recorded.size)
-              ])
-            ]),
-          ]),
-        ]);
-      } else {
-        return [
-          m('p', 'Create animated GIFs from a screen recording.'),
-          m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
-          isMobile ? m('p', 'Sorry, no mobile support.') : undefined,
-          isMobile ? undefined : m('button', { class: 'button primary', onclick: () => this.startRecording() }, [
-            m('img', { src: 'https://icongr.am/octicons/play.svg?size=16&color=ffffff' }),
-            'Start Recording'
-          ])
-        ];
-      }
-    }
-
-    if (this.state === 'recording') {
-      return m('div', [
-        m(Timer, { duration: typeof this.recordingStartTime === 'number' ? new Date().getTime() - this.recordingStartTime : 0 }),
-        m('canvas', { width: 640, height: 480 }),
-        m('video', { autoplay: true, playsinline: true }),
+        ]),
       ]);
+
+      actions = [
+        m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.app.startRecording(), primary: true }),
+        m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() })
+      ];
+    } else {
+      content = [
+        m('p', 'Create animated GIFs from a screen recording.'),
+        m('p', 'Client-side only, no data is uploaded. Modern browser required.'),
+        isMobile ? m('p', 'Sorry, mobile does not support screen recording.') : undefined,
+        isMobile ? undefined : m(Button, { label: 'Start Recording', icon: 'play', onclick: () => this.app.startRecording(), primary: true }),
+      ];
     }
 
-    if (this.state === 'rendering') {
-      return m('div', [
-        m('progress', { max: '1', value: this.renderingProgress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.renderingProgress * 100)}%`),
-      ]);
-    }
+    return [m(View, { actions }, content)];
+  }
+}
+
+class RecordView {
+
+  constructor(vnode) {
+    this.app = vnode.attrs.app;
+    this.recording = this.app.recording;
+    this.startTime = undefined;
   }
 
-  onupdate(vnode) {
-    if (this.state === 'recording' && this.recording === undefined) {
-      const video = vnode.dom.getElementsByTagName('video')[0];
-      const canvas = vnode.dom.getElementsByTagName('canvas')[0];
-      this._startRecording(video, canvas);
-    }
-  }
+  async oncreate(vnode) {
+    const video = vnode.dom.getElementsByTagName('video')[0];
+    const canvas = vnode.dom.getElementsByTagName('canvas')[0];
 
-  startRecording() {
-    if (this.state !== 'idle') {
-      return;
-    }
-
-    if (this.recorded && !window.confirm('This will discard the current recording, are you sure you want to continue?')) {
-      return;
-    }
-
-    this.recorded = undefined;
-    this.state = 'recording';
-  }
-
-  async _startRecording(video, canvas) {
     let captureStream;
 
     try {
       captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
     } catch (err) {
       console.error(err);
-      this.state = 'idle';
+      this.app.cancel();
       m.redraw();
       return;
     }
@@ -166,117 +122,374 @@ class App {
     video.srcObject = captureStream;
 
     const ctx = canvas.getContext('2d');
-    this.recordingStartTime = new Date().getTime();
 
-    let timestamp = undefined;
-    let first = true;
-
-    const frameInterval = setInterval(async () => {
-      try {
-        let delay = 0;
-
-        if (first) {
-          const width = video.videoWidth;
-          const height = video.videoHeight;
-
-          this.recording.gif = new GIF({
-            workers: navigator.hardwareConcurrency,
-            quality: 10,
-            width,
-            height,
-            workerScript: 'gif.worker.js',
-          });
-
-          canvas.width = `${width}`;
-          canvas.height = `${height}`;
-        }
-
-        ctx.drawImage(video, 0, 0);
-        const now = new Date().getTime();
-
-        if (!first) {
-          delay = now - timestamp;
-          timestamp = now;
-        }
-
-        this.recording.gif.addFrame(ctx, { copy: true, delay: first ? undefined : delay });
-
-        first = false;
-      } catch (err) {
-        if (err) {
-          throw err;
-        }
+    const frameInterval = setInterval(() => {
+      if (video.videoWidth === 0) {
+        return;
       }
-    }, 100);
+
+      const first = typeof this.startTime === 'undefined';
+
+      if (first) {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        this.startTime = new Date().getTime();
+        this.recording.width = width;
+        this.recording.height = height;
+        canvas.width = `${width}`;
+        canvas.height = `${height}`;
+      }
+
+      ctx.drawImage(video, 0, 0);
+
+      this.recording.frames.push(ctx.getImageData(0, 0, this.recording.width, this.recording.height));
+    }, FRAME_DELAY);
 
     const redrawInterval = setInterval(() => m.redraw(), 1000);
-    m.redraw();
 
     const track = captureStream.getVideoTracks()[0];
-    const endedListener = () => this.stopRecording();
+    const endedListener = () => {
+      this.app.stopRecording();
+      m.redraw();
+    };
     track.addEventListener('ended', endedListener);
 
-    this.recording = {
-      gif: undefined,
-      stop: () => {
-        clearInterval(frameInterval);
-        clearInterval(redrawInterval);
-        track.removeEventListener('ended', endedListener);
-        track.stop();
+    this.onbeforeremove = () => {
+      clearInterval(frameInterval);
+      clearInterval(redrawInterval);
+      track.removeEventListener('ended', endedListener);
+      track.stop();
+    };
+
+    m.redraw();
+  }
+
+  view() {
+    const actions = [
+      m(Button, { label: 'Stop', icon: 'primitive-square', onclick: () => this.app.stopRecording() })
+    ];
+
+    return [
+      m(View, { actions }, [
+        m(Timer, { duration: typeof this.startTime === 'number' ? new Date().getTime() - this.startTime : 0 }),
+        m('canvas.hidden', { width: 640, height: 480 }),
+        m('video.hidden', { autoplay: true, playsinline: true }),
+      ]),
+    ];
+  }
+}
+
+class PreviewView {
+
+  constructor(vnode) {
+    this.app = vnode.attrs.app;
+    this.recording = this.app.recording;
+    this.canvas = undefined;
+
+    this.playback = {
+      index: undefined,
+      disposable: undefined
+    };
+
+    this.trim = {
+      start: 0,
+      end: this.recording.frames.length - 1
+    };
+
+    this.crop = {
+      top: 0,
+      left: 0,
+      width: this.recording.width,
+      height: this.recording.height
+    };
+  }
+
+  get isPlaying() { return !!this.playback.disposable; }
+
+  oncreate(vnode) {
+    this.canvas = vnode.dom.getElementsByTagName('canvas')[0];
+    this.play();
+  }
+
+  onbeforeremove() {
+    this.pause();
+  }
+
+  view() {
+    const actions = [
+      m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', primary: true, onclick: () => this.togglePlayPause() }),
+      m(Button, { title: 'Trim start to current position', iconset: 'material', icon: 'format-horizontal-align-left', outline: this.trim.start === 0, disabled: this.isPlaying || this.playback.index >= this.trim.end || (this.playback.index === 0 && this.trim.start === 0), onclick: () => this.trimStart() }),
+      m(Button, { title: 'Trim end to current position', iconset: 'material', icon: 'format-horizontal-align-right', outline: this.trim.end === this.recording.frames.length - 1, disabled: this.isPlaying || this.playback.index <= this.trim.start || (this.playback.index === this.recording.frames.length - 1 && this.trim.end === this.recording.frames.length - 1), onclick: () => this.trimEnd() }),
+      m('.playbar', [
+        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
+        m('.trim-bar', { style: { left: `${this.trim.start * 100 / (this.recording.frames.length - 1)}%`, width: `${(this.trim.end - this.trim.start) * 100 / (this.recording.frames.length - 1)}%` } }, [
+          m('.trim-start'),
+          m('.trim-end'),
+        ])
+      ]),
+      m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
+      m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(this.trim), primary: true }),
+    ];
+
+    return [
+      m(View, { actions }, [
+        // m('.crop', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
+        //   m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
+        //   m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
+        //   m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
+        //   m('.crop-handle.right', { onmousedown: e => this.onMouseDown(['right'], e) }),
+        //   m('.crop-handle.tl', { onmousedown: e => this.onMouseDown(['top', 'left'], e) }),
+        //   m('.crop-handle.tr', { onmousedown: e => this.onMouseDown(['top', 'right'], e) }),
+        //   m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
+        //   m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
+        // ]),
+        m('canvas.recording', { width: this.recording.width, height: this.recording.height })
+      ])
+    ];
+  }
+
+  onMouseDown(directions, event) {
+    const start = {
+      top: this.crop.top,
+      left: this.crop.left,
+      width: this.crop.width,
+      height: this.crop.height,
+      bottom: this.crop.top + this.crop.height,
+      right: this.crop.left + this.crop.width,
+      screenX: event.screenX,
+      screenY: event.screenY,
+    };
+
+    const handlers = {
+      top: e => {
+        const diff = e.screenY - start.screenY;
+        const top = Math.max(0, Math.min(start.bottom - 20, start.top + diff));
+        const delta = top - start.top;
+        this.crop.top = top;
+        this.crop.height = start.height - delta;
+      },
+      bottom: e => {
+        const diff = e.screenY - start.screenY;
+        const height = Math.max(20, Math.min(this.recording.height - start.top, start.height + diff));
+        this.crop.height = height;
+      },
+      left: e => {
+        const diff = e.screenX - start.screenX;
+        const left = Math.max(0, Math.min(start.right - 20, start.left + diff));
+        const delta = left - start.left;
+        this.crop.left = left;
+        this.crop.width = start.width - delta;
+      },
+      right: e => {
+        const diff = e.screenX - start.screenX;
+        const width = Math.max(20, Math.min(this.recording.width - start.left, start.width + diff));
+        this.crop.width = width;
       }
+    };
+
+    const onMouseMove = e => {
+      for (const direction of directions) {
+        handlers[direction](e);
+      }
+
+      m.redraw();
+    };
+
+    const onMouseUp = () => {
+      document.body.removeEventListener('mousemove', onMouseMove);
+      document.body.removeEventListener('mouseup', onMouseUp);
+      m.redraw();
+    };
+
+    event.preventDefault();
+    document.body.addEventListener('mousemove', onMouseMove);
+    document.body.addEventListener('mouseup', onMouseUp);
+  }
+
+  onSliderInput(e) {
+    this.playback.index = Number(e.target.value);
+
+    const ctx = this.canvas.getContext('2d');
+    ctx.putImageData(this.recording.frames[this.playback.index], 0, 0);
+  }
+
+  play() {
+    if (this.isPlaying) {
+      return;
+    }
+
+    const ctx = this.canvas.getContext('2d');
+    const duration = (this.trim.end - this.trim.start + 1) * FRAME_DELAY;
+    const start = this.trim.start * FRAME_DELAY + new Date().getTime() - ((this.playback.index || 0) * FRAME_DELAY);
+    let animationFrame = undefined;
+
+    const draw = () => {
+      const index = this.trim.start + Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
+
+      if (this.playback.index !== index) {
+        ctx.putImageData(this.recording.frames[index], 0, 0);
+        m.redraw();
+      }
+
+      this.playback.index = index;
+      animationFrame = requestAnimationFrame(draw);
+    };
+
+    animationFrame = requestAnimationFrame(draw);
+
+    this.playback.disposable = () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }
+
+  pause() {
+    if (!this.isPlaying) {
+      return;
+    }
+
+    this.playback.disposable();
+    this.playback.disposable = undefined;
+  }
+
+  togglePlayPause() {
+    if (this.isPlaying) {
+      this.pause();
+    } else {
+      this.play();
+    }
+  }
+
+  trimStart() {
+    if (this.trim.start === this.playback.index) {
+      this.trim.start = 0;
+    } else {
+      this.trim.start = this.playback.index;
+    }
+  }
+
+  trimEnd() {
+    if (this.trim.end === this.playback.index) {
+      this.trim.end = this.recording.frames.length - 1;
+    } else {
+      this.trim.end = this.playback.index;
+    }
+  }
+}
+
+class RenderView {
+
+  constructor(vnode) {
+    this.app = vnode.attrs.app;
+    this.recording = this.app.recording;
+    this.trim = this.app.trim;
+    this.progress = 0;
+  }
+
+  async oncreate() {
+    const gif = new GIF({
+      workers: navigator.hardwareConcurrency,
+      quality: 10,
+      width: this.recording.width,
+      height: this.recording.height,
+      workerScript: 'gif.worker.js',
+    });
+
+    gif.on('progress', progress => {
+      this.progress = progress;
+      m.redraw();
+    });
+
+    gif.once('finished', blob => {
+      this.app.setRenderedRecording({
+        duration: (this.trim.end - this.trim.start + 1) * FRAME_DELAY,
+        size: blob.size,
+        url: URL.createObjectURL(blob),
+      });
+      m.redraw();
+    });
+
+    let first = true;
+
+    for (let i = this.trim.start; i <= this.trim.end; i++) {
+      const frame = this.recording.frames[i];
+      gif.addFrame(frame, { delay: first ? 0 : FRAME_DELAY });
+      first = false;
+    }
+
+    this.onbeforeremove = () => {
+      gif.abort();
+    };
+
+    gif.render();
+  }
+
+  view() {
+    const actions = [
+      m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.app.cancel() })
+    ];
+
+    return [
+      m(View, { actions }, [
+        m('progress', { max: '1', value: this.progress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.progress * 100)}%`)
+      ])
+    ];
+  }
+}
+
+class App {
+
+  constructor() {
+    this.state = 'idle';
+    this.recording = undefined;
+    window.onbeforeunload = () => this.recording ? '' : null;
+  }
+
+  view() {
+    return m('section', { class: 'app' }, this.stateView());
+  }
+
+  stateView() {
+    switch (this.state) {
+      case 'idle': return m(IdleView, { app: this });
+      case 'recording': return m(RecordView, { app: this });
+      case 'preview': return m(PreviewView, { app: this });
+      case 'rendering': return m(RenderView, { app: this });
+    }
+  }
+
+  startRecording() {
+    if (this.recording && !window.confirm('This will discard the current recording, are you sure you want to continue?')) {
+      return;
+    }
+
+    this.state = 'recording';
+    this.recording = {
+      width: undefined,
+      height: undefined,
+      frames: []
     };
   }
 
   stopRecording() {
-    if (this.state !== 'recording') {
-      return;
-    }
+    this.state = 'preview';
+  }
 
+  startRendering(trim) {
     this.state = 'rendering';
-
-    const duration = new Date() - this.recordingStartTime;
-    this.recording.stop();
-    this.renderingProgress = 0;
-
-    this.recording.gif.on('progress', progress => {
-      this.renderingProgress = progress;
-      m.redraw();
-    });
-
-    const done = () => {
-      this.recording = undefined;
-      this.recordingStartTime = undefined;
-      m.redraw();
-    };
-
-    this.recording.gif.once('finished', blob => {
-      this.state = 'idle';
-      this.recorded = {
-        duration,
-        size: blob.size,
-        url: URL.createObjectURL(blob),
-      };
-      done();
-    });
-
-    this.recording.gif.once('abort', () => {
-      this.state = 'idle';
-      done();
-    });
-
-    this.recording.gif.render();
+    this.trim = trim;
   }
 
-  cancelRecording() {
-    if (this.state !== 'rendering') {
-      return;
-    }
-
-    this.recording.gif.abort();
+  setRenderedRecording(recording) {
+    this.state = 'idle';
+    this.recording = recording;
+    this.trim = undefined;
   }
 
-  clearRecording() {
-    this.recorded = undefined;
+  cancel() {
+    this.state = 'idle';
+    this.recording = undefined;
+    this.trim = undefined;
   }
 }
 
