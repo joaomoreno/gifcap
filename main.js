@@ -229,7 +229,7 @@ class PreviewView {
         ])
       ]),
       m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
-      m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(), primary: true }),
+      m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(this.trim), primary: true }),
     ];
 
     return [
@@ -382,6 +382,7 @@ class RenderView {
   constructor(vnode) {
     this.app = vnode.attrs.app;
     this.recording = this.app.recording;
+    this.trim = this.app.trim;
     this.progress = 0;
   }
 
@@ -401,7 +402,7 @@ class RenderView {
 
     gif.once('finished', blob => {
       this.app.setRenderedRecording({
-        duration: this.recording.frames.length * FRAME_DELAY,
+        duration: (this.trim.end - this.trim.start + 1) * FRAME_DELAY,
         size: blob.size,
         url: URL.createObjectURL(blob),
       });
@@ -410,7 +411,8 @@ class RenderView {
 
     let first = true;
 
-    for (const frame of this.recording.frames) {
+    for (let i = this.trim.start; i <= this.trim.end; i++) {
+      const frame = this.recording.frames[i];
       gif.addFrame(frame, { delay: first ? 0 : FRAME_DELAY });
       first = false;
     }
@@ -473,18 +475,21 @@ class App {
     this.state = 'preview';
   }
 
-  startRendering() {
+  startRendering(trim) {
     this.state = 'rendering';
+    this.trim = trim;
   }
 
   setRenderedRecording(recording) {
     this.state = 'idle';
     this.recording = recording;
+    this.trim = undefined;
   }
 
   cancel() {
     this.state = 'idle';
     this.recording = undefined;
+    this.trim = undefined;
   }
 }
 
