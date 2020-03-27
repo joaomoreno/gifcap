@@ -1,3 +1,6 @@
+const FPS = 10;
+const FRAME_DELAY = Math.floor(1000 / FPS);
+
 function timediff(millis) {
   const abs = Math.floor(millis / 1000);
   const mins = Math.floor(abs / 60);
@@ -108,19 +111,19 @@ class Recorder {
     video.srcObject = captureStream;
 
     const ctx = canvas.getContext('2d');
-    this.startTime = new Date().getTime();
 
-    const frameInterval = setInterval(async () => {
+    const frameInterval = setInterval(() => {
       if (video.videoWidth === 0) {
         return;
       }
 
-      const first = typeof this.recording.width === 'undefined';
+      const first = typeof this.startTime === 'undefined';
 
       if (first) {
         const width = video.videoWidth;
         const height = video.videoHeight;
 
+        this.startTime = new Date().getTime();
         this.recording.width = width;
         this.recording.height = height;
         canvas.width = `${width}`;
@@ -129,11 +132,8 @@ class Recorder {
 
       ctx.drawImage(video, 0, 0);
 
-      this.recording.frames.push({
-        imageData: ctx.getImageData(0, 0, this.recording.width, this.recording.height),
-        timestamp: first ? 0 : new Date().getTime() - this.startTime
-      });
-    }, 100);
+      this.recording.frames.push(ctx.getImageData(0, 0, this.recording.width, this.recording.height));
+    }, FRAME_DELAY);
 
     const redrawInterval = setInterval(() => m.redraw(), 1000);
 
@@ -178,25 +178,22 @@ class Previewer {
 
   async oncreate(vnode) {
     const canvas = vnode.dom.getElementsByTagName('canvas')[0];
-
     const ctx = canvas.getContext('2d');
-    const firstTimestamp = this.recording.frames[0].timestamp;
-    let start = new Date().getTime();
+
+    const duration = this.recording.frames.length * FRAME_DELAY;
+    const start = new Date().getTime();
+
     let animationFrame = undefined;
-    let index = 0;
+    let lastIndex;
 
     const draw = () => {
-      const frame = this.recording.frames[index];
+      const index = Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
 
-      if (index === 0 || frame.timestamp - firstTimestamp <= new Date().getTime() - start) {
-        ctx.putImageData(frame.imageData, 0, 0);
-
-        if (++index === this.recording.frames.length) {
-          index = 0;
-          start = new Date().getTime();
-        }
+      if (lastIndex !== index) {
+        ctx.putImageData(this.recording.frames[index], 0, 0);
       }
 
+      lastIndex = index;
       animationFrame = requestAnimationFrame(draw);
     };
 
@@ -306,18 +303,18 @@ class Renderer {
 
     gif.once('finished', blob => {
       this.app.setRenderedRecording({
-        duration: this.recording.frames[this.recording.frames.length - 1].timestamp,
+        duration: this.recording.frames.length * FRAME_DELAY,
         size: blob.size,
         url: URL.createObjectURL(blob),
       });
       m.redraw();
     });
 
-    let previous = undefined;
+    let first = true;
 
-    for (const { imageData, timestamp } of this.recording.frames) {
-      gif.addFrame(imageData, { delay: previous && timestamp - previous });
-      previous = timestamp;
+    for (const frame of this.recording.frames) {
+      gif.addFrame(frame, { delay: first ? 0 : FRAME_DELAY });
+      first = false;
     }
 
     this.onbeforeremove = () => {
