@@ -26,6 +26,10 @@ body {
   color: #333;
 }
 
+img {
+  max-width: initial !important;
+}
+
 .hidden {
   display: none;
 }
@@ -41,9 +45,18 @@ body {
   display: flex;
   justify-content: space-between;
   padding: 1em;
-  background: #fafafa;
-  color: #9e9e9e;
+  background: #333333;
+  color: #c5c5c5;
   border-top: 1px solid #9e9e9e;
+  font-size: 0.8em;
+}
+
+#app-footer a {
+  color: #ce6464;
+}
+
+#app-footer img {
+  vertical-align: middle;
 }
 
 h1 {
@@ -75,6 +88,7 @@ button > img {
 .actions {
   padding: 2em;
   display: flex;
+  border-top: 1px solid #9e9e9e;
 }
 
 .actions:empty {
@@ -104,8 +118,10 @@ button > img {
   align-items: center;
   flex-direction: column;
   box-shadow: inset 0 0 4px #a5a5a5;
+  border-top: 1px solid #9e9e9e;
   font-size: 20px;
   text-align: center;
+  background: #fafafa;
 }
 
 .recording {

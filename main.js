@@ -208,8 +208,10 @@ class PreviewView {
 
   view() {
     const actions = [
+      m(Button, { label: 'Play/Pause', icon: 'play', onclick: () => this.togglePlayPause() }),
+      m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
+      m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(), primary: true }),
-      m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() })
     ];
 
     return [
@@ -224,9 +226,7 @@ class PreviewView {
         //   m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
         //   m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
         // ]),
-        m('canvas.recording', { width: this.recording.width, height: this.recording.height }),
-        m(Button, { label: 'Play/Pause', icon: 'play', onclick: () => this.togglePlayPause() }),
-        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) })
+        m('canvas.recording', { width: this.recording.width, height: this.recording.height })
       ])
     ];
   }
