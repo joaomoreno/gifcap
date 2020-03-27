@@ -77,6 +77,10 @@ button > img {
   display: flex;
 }
 
+.actions:empty {
+  display: none;
+}
+
 .status {
   display: flex;
   justify-content: center;
@@ -99,9 +103,7 @@ button > img {
   justify-content: center;
   align-items: center;
   flex-direction: column;
-}
-
-.content {
+  box-shadow: inset 0 0 4px #a5a5a5;
   font-size: 20px;
   text-align: center;
 }
