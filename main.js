@@ -21,8 +21,12 @@ function humanSize(size) {
 
 const Button = {
   view(vnode) {
-    return m('button', { class: `button ${vnode.attrs.primary ? 'primary' : 'secondary'}`, onclick: vnode.attrs.onclick }, [
-      m('img', { src: `https://icongr.am/octicons/${vnode.attrs.icon}.svg?size=16&color=ffffff` }),
+    return m('button', {
+      class: `button ${vnode.attrs.primary ? 'primary' : 'secondary'} ${vnode.attrs.label ? '' : 'icon-only'}`,
+      onclick: vnode.attrs.onclick,
+      title: vnode.attrs.title || vnode.attrs.label
+    }, [
+      m('img', { src: `https://icongr.am/${vnode.attrs.iconset || 'octicons'}/${vnode.attrs.icon}.svg?size=16&color=ffffff` }),
       vnode.attrs.label
     ]);
   }
@@ -208,9 +212,9 @@ class PreviewView {
 
   view() {
     const actions = [
-      m(Button, { label: 'Play/Pause', icon: 'play', onclick: () => this.togglePlayPause() }),
+      m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', onclick: () => this.togglePlayPause() }),
       m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
-      m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
+      m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(), primary: true }),
     ];
 
