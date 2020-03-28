@@ -44,10 +44,10 @@ const Timer = {
 
 const View = {
   view(vnode) {
-    return [
+    return m('section', { class: 'view' }, [
       m('section', { class: 'content' }, vnode.children),
       m('section', { class: 'actions' }, vnode.attrs.actions)
-    ];
+    ]);
   }
 };
 
@@ -189,7 +189,8 @@ class PreviewView {
 
     this.playback = {
       index: undefined,
-      disposable: undefined
+      disposable: undefined,
+      reset: false
     };
 
     this.trim = {
@@ -209,6 +210,7 @@ class PreviewView {
 
   oncreate(vnode) {
     this.canvas = vnode.dom.getElementsByTagName('canvas')[0];
+    this.playbar = vnode.dom.querySelector('.playbar');
     this.play();
   }
 
@@ -219,13 +221,11 @@ class PreviewView {
   view() {
     const actions = [
       m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', primary: true, onclick: () => this.togglePlayPause() }),
-      m(Button, { title: 'Trim start to current position', iconset: 'material', icon: 'format-horizontal-align-left', outline: this.trim.start === 0, disabled: this.isPlaying || this.playback.index >= this.trim.end || (this.playback.index === 0 && this.trim.start === 0), onclick: () => this.trimStart() }),
-      m(Button, { title: 'Trim end to current position', iconset: 'material', icon: 'format-horizontal-align-right', outline: this.trim.end === this.recording.frames.length - 1, disabled: this.isPlaying || this.playback.index <= this.trim.start || (this.playback.index === this.recording.frames.length - 1 && this.trim.end === this.recording.frames.length - 1), onclick: () => this.trimEnd() }),
       m('.playbar', [
         m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
         m('.trim-bar', { style: { left: `${this.trim.start * 100 / (this.recording.frames.length - 1)}%`, width: `${(this.trim.end - this.trim.start) * 100 / (this.recording.frames.length - 1)}%` } }, [
-          m('.trim-start'),
-          m('.trim-end'),
+          m('.trim-start', { onmousedown: e => this.onTrimMouseDown('start', e) }),
+          m('.trim-end', { onmousedown: e => this.onTrimMouseDown('end', e) }),
         ])
       ]),
       m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
@@ -247,6 +247,41 @@ class PreviewView {
         m('canvas.recording', { width: this.recording.width, height: this.recording.height })
       ])
     ];
+  }
+
+  onTrimMouseDown(handle, event) {
+    event.preventDefault();
+
+    const start = {
+      width: this.playbar.clientWidth,
+      screenX: event.screenX,
+      index: handle === 'start' ? this.trim.start : this.trim.end,
+      min: handle === 'start' ? 0 : this.trim.start + 1,
+      max: handle === 'start' ? this.trim.end - 1 : this.recording.frames.length - 1
+    };
+
+    const onMouseMove = e => {
+      const diff = e.screenX - start.screenX;
+      const index = start.index + Math.round(diff * (this.recording.frames.length - 1) / start.width);
+      this.trim[handle] = Math.max(start.min, Math.min(start.max, index));
+      m.redraw();
+    };
+
+    const onMouseUp = () => {
+      document.body.removeEventListener('mousemove', onMouseMove);
+      document.body.removeEventListener('mouseup', onMouseUp);
+
+      this.playback.reset = true;
+
+      if (this.isPlaying) {
+        this.play();
+      }
+
+      m.redraw();
+    };
+
+    document.body.addEventListener('mousemove', onMouseMove);
+    document.body.addEventListener('mouseup', onMouseUp);
   }
 
   onMouseDown(directions, event) {
@@ -315,17 +350,27 @@ class PreviewView {
   }
 
   play() {
-    if (this.isPlaying) {
-      return;
+    if (this.playback.disposable) {
+      this.playback.disposable();
     }
 
+    if (this.playback.reset) {
+      this.playback.index = undefined;
+      this.playback.reset = false;
+    }
+
+    const range = {
+      start: this.trim.start,
+      end: this.trim.end
+    };
+
     const ctx = this.canvas.getContext('2d');
-    const duration = (this.trim.end - this.trim.start + 1) * FRAME_DELAY;
-    const start = this.trim.start * FRAME_DELAY + new Date().getTime() - ((this.playback.index || 0) * FRAME_DELAY);
+    const duration = (range.end - range.start + 1) * FRAME_DELAY;
+    const start = range.start * FRAME_DELAY + new Date().getTime() - ((this.playback.index || range.start) * FRAME_DELAY);
     let animationFrame = undefined;
 
     const draw = () => {
-      const index = this.trim.start + Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
+      const index = range.start + Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
 
       if (this.playback.index !== index) {
         ctx.putImageData(this.recording.frames[index], 0, 0);
@@ -344,12 +389,10 @@ class PreviewView {
   }
 
   pause() {
-    if (!this.isPlaying) {
-      return;
+    if (this.playback.disposable) {
+      this.playback.disposable();
+      this.playback.disposable = undefined;
     }
-
-    this.playback.disposable();
-    this.playback.disposable = undefined;
   }
 
   togglePlayPause() {
@@ -446,10 +489,6 @@ class App {
   }
 
   view() {
-    return m('section', { class: 'app' }, this.stateView());
-  }
-
-  stateView() {
     switch (this.state) {
       case 'idle': return m(IdleView, { app: this });
       case 'recording': return m(RecordView, { app: this });
