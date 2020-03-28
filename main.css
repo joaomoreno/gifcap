@@ -104,7 +104,7 @@ button:not(.icon-only) > img {
   flex: 1;
 }
 
-.app {
+.view {
   width: 100%;
   height: 100%;
   display: flex;
@@ -200,10 +200,9 @@ button:not(.icon-only) > img {
 .playbar > .trim-bar > .trim-start, 
 .playbar > .trim-bar > .trim-end {
   position: absolute;
-  width: 6px;
-  height: 6px;
   border: 6px solid #AD2C2C;
   border-bottom-color: transparent;
+  cursor: pointer;
 }
 
 .playbar > .trim-bar > .trim-start {
