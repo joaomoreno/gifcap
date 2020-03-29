@@ -210,6 +210,7 @@ class PreviewView {
     };
 
     this.crop = {
+      enabled: false,
       top: 0,
       left: 0,
       width: this.recording.width,
@@ -256,6 +257,7 @@ class PreviewView {
   view() {
     const actions = [
       m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', primary: true, onclick: () => this.togglePlayPause() }),
+      m(Button, { title: 'Crop', icon: 'screen-normal', primary: true, outline: !this.crop.enabled, onclick: () => this.toggleCrop() }),
       m('.playbar', [
         m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onPlaybarInput(e) }),
         m('.trim-bar', { style: { left: `${this.trim.start * 100 / (this.recording.frames.length - 1)}%`, width: `${(this.trim.end - this.trim.start) * 100 / (this.recording.frames.length - 1)}%` } }, [
@@ -282,7 +284,7 @@ class PreviewView {
       }, [
         m('.preview', { style: { top: `${top}px`, left: `${left}px`, width: `${width}px`, height: `${height}px` } }, [
           m('canvas', { width: this.recording.width, height: this.recording.height }),
-          m('.crop-box', {
+          this.crop.enabled && m('.crop-box', {
             style: {
               top: `${this.crop.top * this.viewport.zoom / 100}px`,
               left: `${this.crop.left * this.viewport.zoom / 100}px`,
@@ -513,6 +515,10 @@ class PreviewView {
     } else {
       this.play();
     }
+  }
+
+  toggleCrop() {
+    this.crop.enabled = !this.crop.enabled;
   }
 }
 

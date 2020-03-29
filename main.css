@@ -240,3 +240,7 @@ input[type="range"] {
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
+
+.button.outline {
+  border: none;
+}
