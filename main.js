@@ -195,7 +195,7 @@ class PreviewView {
       height: undefined,
       top: 0,
       left: 0,
-      zoom: 100
+      zoom: 1
     };
 
     this.playback = {
@@ -235,12 +235,7 @@ class PreviewView {
   }
 
   zoomToFit() {
-    this.viewport.zoom = 10 * Math.max(1,
-      Math.min(10,
-        Math.floor(10 * (this.viewport.width * .95) / this.recording.width),
-        Math.floor(10 * (this.viewport.height * .95) / this.recording.height)
-      )
-    );
+    this.viewport.zoom = Math.max(0.1, Math.min(1, this.viewport.width * .95 / this.recording.width, this.viewport.height * .95 / this.recording.height));
   }
 
   updateViewport() {
@@ -268,7 +263,7 @@ class PreviewView {
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering({ trim: this.trim, crop: this.crop }), primary: true }),
     ];
 
-    const scale = value => value * this.viewport.zoom / 100;
+    const scale = value => value * this.viewport.zoom;
     const width = scale(this.recording.width);
     const height = scale(this.recording.height);
     const top = Math.floor(scale(this.viewport.top) + (this.viewport.height / 2) - (height / 2));
@@ -347,8 +342,8 @@ class PreviewView {
 
   onContentWheel(event) {
     event.preventDefault();
-    const zoom = this.viewport.zoom - Math.floor(event.deltaY / 180) * 10;
-    this.viewport.zoom = Math.max(10, Math.min(200, zoom));
+    const zoom = this.viewport.zoom - event.deltaY / 180 * 0.1;
+    this.viewport.zoom = Math.max(0.1, Math.min(2, zoom));
   }
 
   onContentMouseDown(event) {
@@ -360,16 +355,14 @@ class PreviewView {
   }
 
   onCrop(event) {
-    const reverseScale = value => value / this.viewport.zoom * 100;
-    const scale = value => value * this.viewport.zoom / 100;
-    const width = scale(this.recording.width);
-    const height = scale(this.recording.height);
-    const top = Math.floor(scale(this.viewport.top) + (this.viewport.height / 2) - (height / 2));
-    const left = Math.floor(scale(this.viewport.left) + (this.viewport.width / 2) - (width / 2));
+    const width = this.recording.width * this.viewport.zoom;
+    const height = this.recording.height * this.viewport.zoom;
+    const top = Math.floor(this.viewport.top * this.viewport.zoom + (this.viewport.height / 2) - (height / 2));
+    const left = Math.floor(this.viewport.left * this.viewport.zoom + (this.viewport.width / 2) - (width / 2));
     const offsetTop = event.currentTarget.offsetTop;
     const offsetLeft = event.currentTarget.offsetLeft;
-    const mouseTop = event => Math.max(0, Math.min(this.recording.height, reverseScale(event.clientY - offsetTop - top)));
-    const mouseLeft = event => Math.max(0, Math.min(this.recording.width, reverseScale(event.clientX - offsetLeft - left)));
+    const mouseTop = event => Math.max(0, Math.min(this.recording.height, (event.clientY - offsetTop - top) / this.viewport.zoom));
+    const mouseLeft = event => Math.max(0, Math.min(this.recording.width, (event.clientX - offsetLeft - left) / this.viewport.zoom));
     const point = event => ({ top: mouseTop(event), left: mouseLeft(event) });
     const from = point(event);
 
@@ -409,7 +402,6 @@ class PreviewView {
   }
 
   onViewportMove(event) {
-    const reverseScale = value => value / this.viewport.zoom * 100;
     const start = {
       top: this.viewport.top,
       left: this.viewport.left,
@@ -418,8 +410,8 @@ class PreviewView {
     };
 
     const onMouseMove = e => {
-      this.viewport.top = start.top + reverseScale(e.screenY - start.screenY);
-      this.viewport.left = start.left + reverseScale(e.screenX - start.screenX);
+      this.viewport.top = start.top + (e.screenY - start.screenY) / this.viewport.zoom;
+      this.viewport.left = start.left + (e.screenX - start.screenX) / this.viewport.zoom;
       m.redraw();
     };
 
