@@ -273,7 +273,8 @@ class PreviewView {
       m(View, {
         actions, contentProps: {
           onwheel: e => this.onContentWheel(e),
-          onmousedown: e => this.onContentMouseDown(e)
+          onmousedown: e => this.onContentMouseDown(e),
+          ondblclick: e => this.onContentDblClick(e)
         }
       }, [
         // m('.crop', {}, [
@@ -361,7 +362,22 @@ class PreviewView {
     document.body.addEventListener('mouseup', onMouseUp);
   }
 
+  onContentWheel(event) {
+    event.preventDefault();
+    const zoom = this.viewport.zoom - Math.floor(event.deltaY / 180) * 10;
+    this.viewport.zoom = Math.max(10, Math.min(200, zoom));
+  }
+
   onContentMouseDown(event) {
+    let node = event.target;
+
+    do {
+      if (/zoom-container/.test(node.className)) {
+        return;
+      }
+      node = node.parentElement;
+    } while (node);
+
     const start = {
       top: this.viewport.top,
       left: this.viewport.left,
@@ -381,15 +397,15 @@ class PreviewView {
       m.redraw();
     };
 
+    event.preventDefault();
     document.body.addEventListener('mousemove', onMouseMove);
     document.body.addEventListener('mouseup', onMouseUp);
   }
 
-  onContentWheel(event) {
+  onContentDblClick(event) {
     event.preventDefault();
-
-    const zoom = this.viewport.zoom - Math.floor(event.deltaY / 180) * 10;
-    this.viewport.zoom = Math.max(10, Math.min(200, zoom));
+    this.viewport.top = 0;
+    this.viewport.left = 0;
   }
 
   onMouseDown(directions, event) {
