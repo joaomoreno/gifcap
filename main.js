@@ -45,7 +45,7 @@ const Timer = {
 const View = {
   view(vnode) {
     return m('section', { class: 'view' }, [
-      m('section', { class: 'content' }, vnode.children),
+      m('section', { class: 'content', ...(vnode.attrs.contentProps || {}) }, vnode.children),
       m('section', { class: 'actions' }, vnode.attrs.actions)
     ]);
   }
@@ -193,6 +193,8 @@ class PreviewView {
     this.viewport = {
       width: undefined,
       height: undefined,
+      top: 0,
+      left: 0,
       zoom: 100
     };
 
@@ -262,13 +264,27 @@ class PreviewView {
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(this.trim), primary: true }),
     ];
 
+    const top = this.viewport.top * this.viewport.zoom / 100;
+    const left = this.viewport.left * this.viewport.zoom / 100;
     const width = this.recording.width * this.viewport.zoom / 100;
     const height = this.recording.height * this.viewport.zoom / 100;
 
     return [
-      m(View, { actions }, [
+      m(View, {
+        actions, contentProps: {
+          onwheel: e => this.onContentWheel(e),
+          onmousedown: e => this.onContentMouseDown(e)
+        }
+      }, [
         // m('.crop', {}, [
-        //   m('.crop-box', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
+        //   m('.crop-box', {
+        //     style: {
+        //       top: `${this.crop.top}px`,
+        //       left: `${this.crop.left}px`,
+        //       width: `${this.crop.width}px`,
+        //       height: `${this.crop.height}px`
+        //     }
+        //   }, [
         //     m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
         //     m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
         //     m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
@@ -281,8 +297,8 @@ class PreviewView {
         // ]),
         m('canvas.recording-preview', {
           width: this.recording.width, height: this.recording.height, style: {
-            top: `${Math.floor((this.viewport.height / 2) - (height / 2))}px`,
-            left: `${Math.floor((this.viewport.width / 2) - (width / 2))}px`,
+            top: `${Math.floor(top + (this.viewport.height / 2) - (height / 2))}px`,
+            left: `${Math.floor(left + (this.viewport.width / 2) - (width / 2))}px`,
             width: `${width}px`,
             height: `${height}px`
           }
@@ -290,7 +306,7 @@ class PreviewView {
         m('.zoom-container', [
           m('span.tag.is-small', [
             `${this.viewport.zoom}%`,
-            m('input.zoom', { type: 'range', min: '10', max: `300`, step: '10', value: `${this.viewport.zoom}`, oninput: e => this.onZoomInput(e) }),
+            m('input.zoom', { type: 'range', min: '10', max: `200`, step: '10', value: `${this.viewport.zoom}`, oninput: e => this.onZoomInput(e) }),
           ]),
         ])
       ])
@@ -343,6 +359,37 @@ class PreviewView {
 
     document.body.addEventListener('mousemove', onMouseMove);
     document.body.addEventListener('mouseup', onMouseUp);
+  }
+
+  onContentMouseDown(event) {
+    const start = {
+      top: this.viewport.top,
+      left: this.viewport.left,
+      screenX: event.screenX,
+      screenY: event.screenY
+    };
+
+    const onMouseMove = e => {
+      this.viewport.top = start.top + (e.screenY - start.screenY) / this.viewport.zoom * 100;
+      this.viewport.left = start.left + (e.screenX - start.screenX) / this.viewport.zoom * 100;
+      m.redraw();
+    };
+
+    const onMouseUp = () => {
+      document.body.removeEventListener('mousemove', onMouseMove);
+      document.body.removeEventListener('mouseup', onMouseUp);
+      m.redraw();
+    };
+
+    document.body.addEventListener('mousemove', onMouseMove);
+    document.body.addEventListener('mouseup', onMouseUp);
+  }
+
+  onContentWheel(event) {
+    event.preventDefault();
+
+    const zoom = this.viewport.zoom - Math.floor(event.deltaY / 180) * 10;
+    this.viewport.zoom = Math.max(10, Math.min(200, zoom));
   }
 
   onMouseDown(directions, event) {
