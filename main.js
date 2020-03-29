@@ -45,7 +45,7 @@ const Timer = {
 const View = {
   view(vnode) {
     return m('section', { class: 'view' }, [
-      m('section', { class: 'content' }, vnode.children),
+      m('section', { class: `content ${vnode.attrs.contentClass || ''}`, ...(vnode.attrs.contentProps || {}) }, vnode.children),
       m('section', { class: 'actions' }, vnode.attrs.actions)
     ]);
   }
@@ -186,6 +186,17 @@ class PreviewView {
     this.app = vnode.attrs.app;
     this.recording = this.app.recording;
     this.canvas = undefined;
+    this.playbar = undefined;
+    this.content = undefined;
+
+    this.viewportDisposable = undefined;
+    this.viewport = {
+      width: undefined,
+      height: undefined,
+      top: 0,
+      left: 0,
+      zoom: 1
+    };
 
     this.playback = {
       index: undefined,
@@ -211,40 +222,72 @@ class PreviewView {
   oncreate(vnode) {
     this.canvas = vnode.dom.getElementsByTagName('canvas')[0];
     this.playbar = vnode.dom.querySelector('.playbar');
-    this.play();
+    this.content = vnode.dom.querySelector('.content');
+
+    const viewportListener = () => this.updateViewport();
+    window.addEventListener('resize', viewportListener);
+    this.viewportDisposable = () => window.removeEventListener('resize', viewportListener);
+    this.updateViewport();
+    this.zoomToFit();
+
+    m.redraw(); // prevent flickering
+    setTimeout(() => this.play());
+  }
+
+  zoomToFit() {
+    this.viewport.zoom = Math.max(0.1, Math.min(1, this.viewport.width * .95 / this.recording.width, this.viewport.height * .95 / this.recording.height));
+  }
+
+  updateViewport() {
+    this.viewport.width = Math.floor(this.content.clientWidth);
+    this.viewport.height = Math.floor(this.content.clientHeight);
   }
 
   onbeforeremove() {
     this.pause();
+    this.viewportDisposable();
   }
 
   view() {
+    const isCropped = this.crop.top !== 0 || this.crop.left !== 0 || this.crop.width !== this.recording.width || this.crop.height !== this.recording.height;
     const actions = [
       m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', primary: true, onclick: () => this.togglePlayPause() }),
       m('.playbar', [
-        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
+        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onPlaybarInput(e) }),
         m('.trim-bar', { style: { left: `${this.trim.start * 100 / (this.recording.frames.length - 1)}%`, width: `${(this.trim.end - this.trim.start) * 100 / (this.recording.frames.length - 1)}%` } }, [
           m('.trim-start', { onmousedown: e => this.onTrimMouseDown('start', e) }),
           m('.trim-end', { onmousedown: e => this.onTrimMouseDown('end', e) }),
         ])
       ]),
       m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
-      m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(this.trim), primary: true }),
+      m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering({ trim: this.trim, crop: this.crop }), primary: true }),
     ];
 
+    const scale = value => value * this.viewport.zoom;
+    const width = scale(this.recording.width);
+    const height = scale(this.recording.height);
+    const top = Math.floor(scale(this.viewport.top) + (this.viewport.height / 2) - (height / 2));
+    const left = Math.floor(scale(this.viewport.left) + (this.viewport.width / 2) - (width / 2));
+
     return [
-      m(View, { actions }, [
-        // m('.crop', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
-        //   m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
-        //   m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
-        //   m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
-        //   m('.crop-handle.right', { onmousedown: e => this.onMouseDown(['right'], e) }),
-        //   m('.crop-handle.tl', { onmousedown: e => this.onMouseDown(['top', 'left'], e) }),
-        //   m('.crop-handle.tr', { onmousedown: e => this.onMouseDown(['top', 'right'], e) }),
-        //   m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
-        //   m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
-        // ]),
-        m('canvas.recording', { width: this.recording.width, height: this.recording.height })
+      m(View, {
+        actions,
+        contentClass: 'crop',
+        contentProps: {
+          onwheel: e => this.onContentWheel(e),
+          onmousedown: e => this.onContentMouseDown(e),
+          oncontextmenu: e => e.preventDefault()
+        }
+      }, [
+        m('.preview', { style: { top: `${top}px`, left: `${left}px`, width: `${width}px`, height: `${height}px` } }, [
+          m('canvas', { width: this.recording.width, height: this.recording.height }),
+          isCropped && m('.crop-box', {
+            style: {
+              // here be dragons!
+              clipPath: `polygon(evenodd, 0 0, 0 ${scale(this.recording.height)}px, ${scale(this.recording.width)}% ${scale(this.recording.height)}px, ${scale(this.recording.width)}% 0, 0 0, ${scale(this.crop.left)}px ${scale(this.crop.top)}px, ${scale(this.crop.left)}px ${scale(this.crop.top + this.crop.height)}px, ${scale(this.crop.left + this.crop.width)}px ${scale(this.crop.top + this.crop.height)}px, ${scale(this.crop.left + this.crop.width)}px ${scale(this.crop.top)}px, ${scale(this.crop.left)}px ${scale(this.crop.top)}px)`
+            }
+          })
+        ]),
       ])
     ];
   }
@@ -297,54 +340,83 @@ class PreviewView {
     document.body.addEventListener('mouseup', onMouseUp);
   }
 
-  onMouseDown(directions, event) {
-    const start = {
-      top: this.crop.top,
-      left: this.crop.left,
-      width: this.crop.width,
-      height: this.crop.height,
-      bottom: this.crop.top + this.crop.height,
-      right: this.crop.left + this.crop.width,
-      screenX: event.screenX,
-      screenY: event.screenY,
+  onContentWheel(event) {
+    event.preventDefault();
+    const zoom = this.viewport.zoom - event.deltaY / 180 * 0.1;
+    this.viewport.zoom = Math.max(0.1, Math.min(2, zoom));
+  }
+
+  onContentMouseDown(event) {
+    if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      this.onCrop(event);
+    } else {
+      this.onViewportMove(event);
+    }
+  }
+
+  onCrop(event) {
+    const width = this.recording.width * this.viewport.zoom;
+    const height = this.recording.height * this.viewport.zoom;
+    const top = Math.floor(this.viewport.top * this.viewport.zoom + (this.viewport.height / 2) - (height / 2));
+    const left = Math.floor(this.viewport.left * this.viewport.zoom + (this.viewport.width / 2) - (width / 2));
+    const offsetTop = event.currentTarget.offsetTop;
+    const offsetLeft = event.currentTarget.offsetLeft;
+    const mouseTop = event => Math.max(0, Math.min(this.recording.height, (event.clientY - offsetTop - top) / this.viewport.zoom));
+    const mouseLeft = event => Math.max(0, Math.min(this.recording.width, (event.clientX - offsetLeft - left) / this.viewport.zoom));
+    const point = event => ({ top: mouseTop(event), left: mouseLeft(event) });
+    const from = point(event);
+
+    let didMove = false;
+    const onMouseMove = event => {
+      const to = point(event);
+      const top = Math.max(0, Math.min(from.top, to.top));
+      const left = Math.max(0, Math.min(from.left, to.left));
+      const width = Math.min(this.recording.width - left, Math.abs(from.left - to.left));
+      const height = Math.min(this.recording.height - top, Math.abs(from.top - to.top));
+
+      this.crop = { top, left, width, height };
+      didMove = true;
+      m.redraw();
     };
 
-    const handlers = {
-      top: e => {
-        const diff = e.screenY - start.screenY;
-        const top = Math.max(0, Math.min(start.bottom - 20, start.top + diff));
-        const delta = top - start.top;
-        this.crop.top = top;
-        this.crop.height = start.height - delta;
-      },
-      bottom: e => {
-        const diff = e.screenY - start.screenY;
-        const height = Math.max(20, Math.min(this.recording.height - start.top, start.height + diff));
-        this.crop.height = height;
-      },
-      left: e => {
-        const diff = e.screenX - start.screenX;
-        const left = Math.max(0, Math.min(start.right - 20, start.left + diff));
-        const delta = left - start.left;
-        this.crop.left = left;
-        this.crop.width = start.width - delta;
-      },
-      right: e => {
-        const diff = e.screenX - start.screenX;
-        const width = Math.max(20, Math.min(this.recording.width - start.left, start.width + diff));
-        this.crop.width = width;
-      }
-    };
+    const onMouseUp = event => {
+      event.preventDefault();
+      document.body.removeEventListener('mousemove', onMouseMove);
+      document.body.removeEventListener('mouseup', onMouseUp);
 
-    const onMouseMove = e => {
-      for (const direction of directions) {
-        handlers[direction](e);
+      if (!didMove || this.crop.width < 10 || this.crop.height < 10) {
+        this.crop = {
+          top: 0,
+          left: 0,
+          width: this.recording.width,
+          height: this.recording.height
+        };
       }
 
       m.redraw();
     };
 
-    const onMouseUp = () => {
+    event.preventDefault();
+    document.body.addEventListener('mousemove', onMouseMove);
+    document.body.addEventListener('mouseup', onMouseUp);
+  }
+
+  onViewportMove(event) {
+    const start = {
+      top: this.viewport.top,
+      left: this.viewport.left,
+      screenX: event.screenX,
+      screenY: event.screenY
+    };
+
+    const onMouseMove = e => {
+      this.viewport.top = start.top + (e.screenY - start.screenY) / this.viewport.zoom;
+      this.viewport.left = start.left + (e.screenX - start.screenX) / this.viewport.zoom;
+      m.redraw();
+    };
+
+    const onMouseUp = event => {
+      event.preventDefault();
       document.body.removeEventListener('mousemove', onMouseMove);
       document.body.removeEventListener('mouseup', onMouseUp);
       m.redraw();
@@ -355,7 +427,7 @@ class PreviewView {
     document.body.addEventListener('mouseup', onMouseUp);
   }
 
-  onSliderInput(e) {
+  onPlaybarInput(e) {
     this.playback.index = Number(e.target.value);
 
     const ctx = this.canvas.getContext('2d');
@@ -415,22 +487,6 @@ class PreviewView {
       this.play();
     }
   }
-
-  trimStart() {
-    if (this.trim.start === this.playback.index) {
-      this.trim.start = 0;
-    } else {
-      this.trim.start = this.playback.index;
-    }
-  }
-
-  trimEnd() {
-    if (this.trim.end === this.playback.index) {
-      this.trim.end = this.recording.frames.length - 1;
-    } else {
-      this.trim.end = this.playback.index;
-    }
-  }
 }
 
 class RenderView {
@@ -438,16 +494,18 @@ class RenderView {
   constructor(vnode) {
     this.app = vnode.attrs.app;
     this.recording = this.app.recording;
-    this.trim = this.app.trim;
+    this.trim = this.app.renderOptions.trim;
+    this.crop = this.app.renderOptions.crop;
     this.progress = 0;
   }
 
-  async oncreate() {
+  async oncreate(vnode) {
+    const isCropped = this.crop.top !== 0 || this.crop.left !== 0 || this.crop.width !== this.recording.width || this.crop.height !== this.recording.height;
     const gif = new GIF({
       workers: navigator.hardwareConcurrency,
       quality: 10,
-      width: this.recording.width,
-      height: this.recording.height,
+      width: this.crop.width,
+      height: this.crop.height,
       workerScript: 'gif.worker.js',
     });
 
@@ -465,10 +523,17 @@ class RenderView {
       m.redraw();
     });
 
+    const ctx = isCropped && vnode.dom.getElementsByTagName('canvas')[0].getContext('2d');
     let first = true;
 
     for (let i = this.trim.start; i <= this.trim.end; i++) {
-      const frame = this.recording.frames[i];
+      let frame = this.recording.frames[i];
+
+      if (isCropped) {
+        ctx.putImageData(frame, 0, 0);
+        frame = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
+      }
+
       gif.addFrame(frame, { delay: first ? 0 : FRAME_DELAY });
       first = false;
     }
@@ -481,13 +546,15 @@ class RenderView {
   }
 
   view() {
+    const isCropped = this.crop.top !== 0 || this.crop.left !== 0 || this.crop.width !== this.recording.width || this.crop.height !== this.recording.height;
     const actions = [
       m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.app.cancel() })
     ];
 
     return [
       m(View, { actions }, [
-        m('progress', { max: '1', value: this.progress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.progress * 100)}%`)
+        m('progress', { max: '1', value: this.progress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.progress * 100)}%`),
+        isCropped && m('canvas.hidden', { width: this.recording.width, height: this.recording.height }),
       ])
     ];
   }
@@ -527,21 +594,21 @@ class App {
     this.state = 'preview';
   }
 
-  startRendering(trim) {
+  startRendering(renderOptions) {
     this.state = 'rendering';
-    this.trim = trim;
+    this.renderOptions = renderOptions;
   }
 
   setRenderedRecording(recording) {
     this.state = 'idle';
     this.recording = recording;
-    this.trim = undefined;
+    this.renderOptions = undefined;
   }
 
   cancel() {
     this.state = 'idle';
     this.recording = undefined;
-    this.trim = undefined;
+    this.renderOptions = undefined;
   }
 }
 

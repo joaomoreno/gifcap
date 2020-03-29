@@ -122,13 +122,34 @@ button:not(.icon-only) > img {
   font-size: 20px;
   text-align: center;
   background: #fafafa;
+  position: relative;
+  overflow: hidden;
+}
+
+.recording, .preview {
+  box-shadow: 0px 0px 5px 1px #00000054;
 }
 
 .recording {
   max-width: 90vw;
   max-height: 90vh;
   display: block;
-  box-shadow: 0px 0px 5px 1px #00000054;
+}
+
+.preview {
+  position: absolute;
+}
+
+.preview > canvas,
+.preview > .crop-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.preview > canvas {
+  width: 100%;
+  height: 100%;
 }
 
 .recording-card > footer {
@@ -148,31 +169,18 @@ button:not(.icon-only) > img {
   margin-right: 0.3em;
 }
 
-.preview {
-  position: relative;
-}
-
 .crop {
-  position: absolute;
-  box-sizing: border-box;
+  cursor: crosshair;
 }
 
-.crop-handle {
-  width: 10px;
-  height: 10px;
-  background: red;
+.crop-box {
   position: absolute;
-  cursor: all-scroll;
+  background: rgba(193, 193, 193, 0.69);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
-
-.crop-handle.top { top: -1px; width: 100%; height: 3px; cursor: n-resize; }
-.crop-handle.bottom { bottom: -1px; width: 100%; height: 3px; cursor: n-resize; }
-.crop-handle.left { left: -1px; width: 3px; height: 100%; cursor: w-resize; }
-.crop-handle.right { right: -1px; width: 3px; height: 100%; cursor: w-resize; }
-.crop-handle.tl { top: -5px; left: -5px; }
-.crop-handle.tr { top: -5px; right: -5px; }
-.crop-handle.bl { bottom: -5px; left: -5px; }
-.crop-handle.br { bottom: -5px; right: -5px; }
 
 .playbar {
   flex: 1;
@@ -181,8 +189,6 @@ button:not(.icon-only) > img {
 }
 
 .playbar > input {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
   height: 50%;
   margin: 0;
 }
@@ -215,4 +221,13 @@ button:not(.icon-only) > img {
   top: 0;
   right: 0;
   border-left-color: transparent;
+}
+
+input[type="range"] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.button.outline {
+  border: none;
 }
