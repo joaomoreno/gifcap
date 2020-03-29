@@ -228,20 +228,6 @@ button:not(.icon-only) > img {
   border-left-color: transparent;
 }
 
-.zoom-container {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  background: #fafafa;
-  box-shadow: 0px 0px 3px 0px #00000030;
-}
-
-.zoom {
-  width: auto !important;
-}
-
 input[type="range"] {
   padding-left: 0 !important;
   padding-right: 0 !important;

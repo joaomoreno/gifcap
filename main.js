@@ -228,16 +228,19 @@ class PreviewView {
     window.addEventListener('resize', viewportListener);
     this.viewportDisposable = () => window.removeEventListener('resize', viewportListener);
     this.updateViewport();
-
-    this.viewport.zoom = 10 * Math.max(1,
-      Math.min(10,
-        Math.floor(10 * this.viewport.width / this.recording.width),
-        Math.floor(10 * this.viewport.height / this.recording.height)
-      )
-    );
+    this.zoomToFit();
 
     m.redraw(); // prevent flickering
     setTimeout(() => this.play());
+  }
+
+  zoomToFit() {
+    this.viewport.zoom = 10 * Math.max(1,
+      Math.min(10,
+        Math.floor(10 * (this.viewport.width * .95) / this.recording.width),
+        Math.floor(10 * (this.viewport.height * .95) / this.recording.height)
+      )
+    );
   }
 
   updateViewport() {
@@ -303,13 +306,7 @@ class PreviewView {
             width: `${width}px`,
             height: `${height}px`
           }
-        }),
-        m('.zoom-container', [
-          m('span.tag.is-small', [
-            `${this.viewport.zoom}%`,
-            m('input.zoom', { type: 'range', min: '10', max: `200`, step: '10', value: `${this.viewport.zoom}`, oninput: e => this.onZoomInput(e) }),
-          ]),
-        ])
+        })
       ])
     ];
   }
@@ -369,15 +366,6 @@ class PreviewView {
   }
 
   onContentMouseDown(event) {
-    let node = event.target;
-
-    do {
-      if (/zoom-container/.test(node.className)) {
-        return;
-      }
-      node = node.parentElement;
-    } while (node);
-
     const start = {
       top: this.viewport.top,
       left: this.viewport.left,
@@ -406,6 +394,8 @@ class PreviewView {
     event.preventDefault();
     this.viewport.top = 0;
     this.viewport.left = 0;
+    this.updateViewport();
+    this.zoomToFit();
   }
 
   onMouseDown(directions, event) {
@@ -471,10 +461,6 @@ class PreviewView {
 
     const ctx = this.canvas.getContext('2d');
     ctx.putImageData(this.recording.frames[this.playback.index], 0, 0);
-  }
-
-  onZoomInput(e) {
-    this.viewport.zoom = Number(e.target.value);
   }
 
   play() {
