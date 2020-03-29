@@ -530,22 +530,6 @@ class PreviewView {
       this.play();
     }
   }
-
-  trimStart() {
-    if (this.trim.start === this.playback.index) {
-      this.trim.start = 0;
-    } else {
-      this.trim.start = this.playback.index;
-    }
-  }
-
-  trimEnd() {
-    if (this.trim.end === this.playback.index) {
-      this.trim.end = this.recording.frames.length - 1;
-    } else {
-      this.trim.end = this.playback.index;
-    }
-  }
 }
 
 class RenderView {
