@@ -266,7 +266,7 @@ class PreviewView {
         ])
       ]),
       m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
-      m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(this.trim), primary: true }),
+      m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering({ trim: this.trim, crop: this.crop }), primary: true }),
     ];
 
     const width = this.recording.width * this.viewport.zoom / 100;
@@ -527,16 +527,17 @@ class RenderView {
   constructor(vnode) {
     this.app = vnode.attrs.app;
     this.recording = this.app.recording;
-    this.trim = this.app.trim;
+    this.trim = this.app.renderOptions.trim;
+    this.crop = this.app.renderOptions.crop;
     this.progress = 0;
   }
 
-  async oncreate() {
+  async oncreate(vnode) {
     const gif = new GIF({
       workers: navigator.hardwareConcurrency,
       quality: 10,
-      width: this.recording.width,
-      height: this.recording.height,
+      width: this.crop.enabled ? this.crop.width : this.recording.width,
+      height: this.crop.enabled ? this.crop.height : this.recording.height,
       workerScript: 'gif.worker.js',
     });
 
@@ -554,10 +555,18 @@ class RenderView {
       m.redraw();
     });
 
+    const canvas = this.crop.enabled && vnode.dom.getElementsByTagName('canvas')[0];
+    const ctx = canvas && canvas.getContext('2d');
     let first = true;
 
     for (let i = this.trim.start; i <= this.trim.end; i++) {
-      const frame = this.recording.frames[i];
+      let frame = this.recording.frames[i];
+
+      if (this.crop.enabled) {
+        ctx.putImageData(frame, 0, 0);
+        frame = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
+      }
+
       gif.addFrame(frame, { delay: first ? 0 : FRAME_DELAY });
       first = false;
     }
@@ -576,7 +585,8 @@ class RenderView {
 
     return [
       m(View, { actions }, [
-        m('progress', { max: '1', value: this.progress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.progress * 100)}%`)
+        m('progress', { max: '1', value: this.progress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.progress * 100)}%`),
+        this.crop.enabled && m('canvas.hidden', { width: this.recording.width, height: this.recording.height }),
       ])
     ];
   }
@@ -616,21 +626,21 @@ class App {
     this.state = 'preview';
   }
 
-  startRendering(trim) {
+  startRendering(renderOptions) {
     this.state = 'rendering';
-    this.trim = trim;
+    this.renderOptions = renderOptions;
   }
 
   setRenderedRecording(recording) {
     this.state = 'idle';
     this.recording = recording;
-    this.trim = undefined;
+    this.renderOptions = undefined;
   }
 
   cancel() {
     this.state = 'idle';
     this.recording = undefined;
-    this.trim = undefined;
+    this.renderOptions = undefined;
   }
 }
 
