@@ -170,13 +170,16 @@ button:not(.icon-only) > img {
 }
 
 .crop {
-  position: absolute;
-  box-sizing: border-box;
+  cursor: crosshair;
 }
 
 .crop-box {
   position: absolute;
-  border: 2px solid #AD2C2C;
+  background: rgba(193, 193, 193, 0.69);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .playbar {
