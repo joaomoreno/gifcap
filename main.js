@@ -186,6 +186,15 @@ class PreviewView {
     this.app = vnode.attrs.app;
     this.recording = this.app.recording;
     this.canvas = undefined;
+    this.playbar = undefined;
+    this.content = undefined;
+
+    this.viewportDisposable = undefined;
+    this.viewport = {
+      width: undefined,
+      height: undefined,
+      zoom: 100
+    };
 
     this.playback = {
       index: undefined,
@@ -211,18 +220,39 @@ class PreviewView {
   oncreate(vnode) {
     this.canvas = vnode.dom.getElementsByTagName('canvas')[0];
     this.playbar = vnode.dom.querySelector('.playbar');
-    this.play();
+    this.content = vnode.dom.querySelector('.content');
+
+    const viewportListener = () => this.updateViewport();
+    window.addEventListener('resize', viewportListener);
+    this.viewportDisposable = () => window.removeEventListener('resize', viewportListener);
+    this.updateViewport();
+
+    this.viewport.zoom = 10 * Math.max(1,
+      Math.min(10,
+        Math.floor(10 * this.viewport.width / this.recording.width),
+        Math.floor(10 * this.viewport.height / this.recording.height)
+      )
+    );
+
+    m.redraw(); // prevent flickering
+    setTimeout(() => this.play());
+  }
+
+  updateViewport() {
+    this.viewport.width = Math.floor(this.content.clientWidth);
+    this.viewport.height = Math.floor(this.content.clientHeight);
   }
 
   onbeforeremove() {
     this.pause();
+    this.viewportDisposable();
   }
 
   view() {
     const actions = [
       m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', primary: true, onclick: () => this.togglePlayPause() }),
       m('.playbar', [
-        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onSliderInput(e) }),
+        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onPlaybarInput(e) }),
         m('.trim-bar', { style: { left: `${this.trim.start * 100 / (this.recording.frames.length - 1)}%`, width: `${(this.trim.end - this.trim.start) * 100 / (this.recording.frames.length - 1)}%` } }, [
           m('.trim-start', { onmousedown: e => this.onTrimMouseDown('start', e) }),
           m('.trim-end', { onmousedown: e => this.onTrimMouseDown('end', e) }),
@@ -232,19 +262,37 @@ class PreviewView {
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering(this.trim), primary: true }),
     ];
 
+    const width = this.recording.width * this.viewport.zoom / 100;
+    const height = this.recording.height * this.viewport.zoom / 100;
+
     return [
       m(View, { actions }, [
-        // m('.crop', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
-        //   m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
-        //   m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
-        //   m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
-        //   m('.crop-handle.right', { onmousedown: e => this.onMouseDown(['right'], e) }),
-        //   m('.crop-handle.tl', { onmousedown: e => this.onMouseDown(['top', 'left'], e) }),
-        //   m('.crop-handle.tr', { onmousedown: e => this.onMouseDown(['top', 'right'], e) }),
-        //   m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
-        //   m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
+        // m('.crop', {}, [
+        //   m('.crop-box', { style: { top: `${this.crop.top}px`, left: `${this.crop.left}px`, width: `${this.crop.width}px`, height: `${this.crop.height}px` } }, [
+        //     m('.crop-handle.top', { onmousedown: e => this.onMouseDown(['top'], e) }),
+        //     m('.crop-handle.bottom', { onmousedown: e => this.onMouseDown(['bottom'], e) }),
+        //     m('.crop-handle.left', { onmousedown: e => this.onMouseDown(['left'], e) }),
+        //     m('.crop-handle.right', { onmousedown: e => this.onMouseDown(['right'], e) }),
+        //     m('.crop-handle.tl', { onmousedown: e => this.onMouseDown(['top', 'left'], e) }),
+        //     m('.crop-handle.tr', { onmousedown: e => this.onMouseDown(['top', 'right'], e) }),
+        //     m('.crop-handle.bl', { onmousedown: e => this.onMouseDown(['bottom', 'left'], e) }),
+        //     m('.crop-handle.br', { onmousedown: e => this.onMouseDown(['bottom', 'right'], e) }),
+        //   ])
         // ]),
-        m('canvas.recording', { width: this.recording.width, height: this.recording.height })
+        m('canvas.recording-preview', {
+          width: this.recording.width, height: this.recording.height, style: {
+            top: `${Math.floor((this.viewport.height / 2) - (height / 2))}px`,
+            left: `${Math.floor((this.viewport.width / 2) - (width / 2))}px`,
+            width: `${width}px`,
+            height: `${height}px`
+          }
+        }),
+        m('.zoom-container', [
+          m('span.tag.is-small', [
+            `${this.viewport.zoom}%`,
+            m('input.zoom', { type: 'range', min: '10', max: `300`, step: '10', value: `${this.viewport.zoom}`, oninput: e => this.onZoomInput(e) }),
+          ]),
+        ])
       ])
     ];
   }
@@ -355,11 +403,15 @@ class PreviewView {
     document.body.addEventListener('mouseup', onMouseUp);
   }
 
-  onSliderInput(e) {
+  onPlaybarInput(e) {
     this.playback.index = Number(e.target.value);
 
     const ctx = this.canvas.getContext('2d');
     ctx.putImageData(this.recording.frames[this.playback.index], 0, 0);
+  }
+
+  onZoomInput(e) {
+    this.viewport.zoom = Number(e.target.value);
   }
 
   play() {

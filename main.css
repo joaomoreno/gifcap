@@ -122,13 +122,22 @@ button:not(.icon-only) > img {
   font-size: 20px;
   text-align: center;
   background: #fafafa;
+  position: relative;
+  overflow: hidden;
+}
+
+.recording, .recording-preview {
+  box-shadow: 0px 0px 5px 1px #00000054;
 }
 
 .recording {
   max-width: 90vw;
   max-height: 90vh;
   display: block;
-  box-shadow: 0px 0px 5px 1px #00000054;
+}
+
+.recording-preview {
+  position: absolute;
 }
 
 .recording-card > footer {
@@ -157,10 +166,14 @@ button:not(.icon-only) > img {
   box-sizing: border-box;
 }
 
+.crop-box {
+  position: absolute;
+}
+
 .crop-handle {
   width: 10px;
   height: 10px;
-  background: red;
+  background: #AD2C2C;
   position: absolute;
   cursor: all-scroll;
 }
@@ -181,8 +194,6 @@ button:not(.icon-only) > img {
 }
 
 .playbar > input {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
   height: 50%;
   margin: 0;
 }
@@ -215,4 +226,22 @@ button:not(.icon-only) > img {
   top: 0;
   right: 0;
   border-left-color: transparent;
+}
+
+.zoom-container {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  background: #fafafa;
+}
+
+.zoom {
+  width: auto !important;
+}
+
+input[type="range"] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
