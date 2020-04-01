@@ -118,6 +118,9 @@ class RecordView {
       m.redraw();
       return;
     }
+    
+    const stopButton = vnode.dom.getElementsByTagName("section")[1].childNodes[0];
+    stopButton.removeAttribute("disabled");
 
     video.srcObject = captureStream;
 
@@ -167,7 +170,7 @@ class RecordView {
 
   view() {
     const actions = [
-      m(Button, { label: 'Stop', icon: 'primitive-square', onclick: () => this.app.stopRecording() })
+      m(Button, { label: 'Stop', disabled: true, icon: 'primitive-square', onclick: () => this.app.stopRecording() })
     ];
 
     return [
