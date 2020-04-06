@@ -142,8 +142,12 @@ class RecordView {
       }
 
       ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, this.recording.width, this.recording.height);
 
-      this.recording.frames.push(ctx.getImageData(0, 0, this.recording.width, this.recording.height));
+      this.recording.frames.push({
+        imageData,
+        timestamp: new Date().getTime()
+      });
     }, FRAME_DELAY);
 
     const redrawInterval = setInterval(() => m.redraw(), 1000);
@@ -311,7 +315,7 @@ class PreviewView {
       this.trim[handle] = Math.max(start.min, Math.min(start.max, index));
 
       if (!this.isPlaying && previous !== this.trim[handle]) {
-        ctx.putImageData(this.recording.frames[this.trim[handle]], 0, 0);
+        ctx.putImageData(this.recording.frames[this.trim[handle]].imageData, 0, 0);
       }
 
       m.redraw();
@@ -326,14 +330,14 @@ class PreviewView {
       if (this.isPlaying) {
         this.play();
       } else {
-        ctx.putImageData(this.recording.frames[this.playback.index], 0, 0);
+        ctx.putImageData(this.recording.frames[this.playback.index].imageData, 0, 0);
       }
 
       m.redraw();
     };
 
     if (!this.isPlaying) {
-      ctx.putImageData(this.recording.frames[this.trim[handle]], 0, 0);
+      ctx.putImageData(this.recording.frames[this.trim[handle]].imageData, 0, 0);
     }
 
     document.body.addEventListener('mousemove', onMouseMove);
@@ -431,7 +435,7 @@ class PreviewView {
     this.playback.index = Number(e.target.value);
 
     const ctx = this.canvas.getContext('2d');
-    ctx.putImageData(this.recording.frames[this.playback.index], 0, 0);
+    ctx.putImageData(this.recording.frames[this.playback.index].imageData, 0, 0);
   }
 
   play() {
@@ -458,7 +462,7 @@ class PreviewView {
       const index = range.start + Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
 
       if (this.playback.index !== index) {
-        ctx.putImageData(this.recording.frames[index], 0, 0);
+        ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
         m.redraw();
       }
 
@@ -516,7 +520,7 @@ class RenderView {
 
     gif.once('finished', blob => {
       this.app.setRenderedRecording({
-        duration: (this.trim.end - this.trim.start + 1) * FRAME_DELAY,
+        duration: this.recording.frames[this.recording.frames.length - 1].timestamp - this.recording.frames[0].timestamp,
         size: blob.size,
         url: URL.createObjectURL(blob),
       });
@@ -524,18 +528,18 @@ class RenderView {
     });
 
     const ctx = isCropped && vnode.dom.getElementsByTagName('canvas')[0].getContext('2d');
-    let first = true;
+    let previousTimestamp = 0;
 
     for (let i = this.trim.start; i <= this.trim.end; i++) {
-      let frame = this.recording.frames[i];
+      let { imageData, timestamp } = this.recording.frames[i];
 
       if (isCropped) {
-        ctx.putImageData(frame, 0, 0);
-        frame = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
+        ctx.putImageData(imageData, 0, 0);
+        imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
       }
 
-      gif.addFrame(frame, { delay: first ? 0 : FRAME_DELAY });
-      first = false;
+      gif.addFrame(imageData, { delay: previousTimestamp === 0 ? 0 : timestamp - previousTimestamp });
+      previousTimestamp = timestamp;
     }
 
     this.onbeforeremove = () => {
