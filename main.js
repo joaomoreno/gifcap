@@ -134,7 +134,7 @@ class RecordView {
         const width = video.videoWidth;
         const height = video.videoHeight;
 
-        this.startTime = new Date().getTime();
+        this.startTime = Date.now();
         this.recording.width = width;
         this.recording.height = height;
         canvas.width = `${width}`;
@@ -146,7 +146,7 @@ class RecordView {
 
       this.recording.frames.push({
         imageData,
-        timestamp: new Date().getTime()
+        timestamp: Date.now()
       });
     }, FRAME_DELAY);
 
@@ -176,7 +176,7 @@ class RecordView {
 
     return [
       m(View, { actions }, [
-        m(Timer, { duration: typeof this.startTime === 'number' ? new Date().getTime() - this.startTime : 0 }),
+        m(Timer, { duration: typeof this.startTime === 'number' ? Date.now() - this.startTime : 0 }),
         m('canvas.hidden', { width: 640, height: 480 }),
         m('video.hidden', { autoplay: true, playsinline: true }),
       ]),
@@ -455,11 +455,11 @@ class PreviewView {
 
     const ctx = this.canvas.getContext('2d');
     const duration = (range.end - range.start + 1) * FRAME_DELAY;
-    const start = range.start * FRAME_DELAY + new Date().getTime() - ((this.playback.index || range.start) * FRAME_DELAY);
+    const start = range.start * FRAME_DELAY + Date.now() - ((this.playback.index || range.start) * FRAME_DELAY);
     let animationFrame = undefined;
 
     const draw = () => {
-      const index = range.start + Math.floor(((new Date().getTime() - start) % duration) / FRAME_DELAY);
+      const index = range.start + Math.floor(((Date.now() - start) % duration) / FRAME_DELAY);
 
       if (this.playback.index !== index) {
         ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
