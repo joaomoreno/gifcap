@@ -553,7 +553,6 @@ class RenderView {
         imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
       }
 
-      console.log(timestamp - previousTimestamp);
       gif.addFrame(imageData, { delay: timestamp - previousTimestamp });
       previousTimestamp = timestamp;
     }
