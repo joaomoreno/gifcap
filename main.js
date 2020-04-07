@@ -123,7 +123,8 @@ class RecordView {
 
     const ctx = canvas.getContext('2d');
 
-    const frameInterval = setInterval(() => {
+    const worker = new Worker('ticker.js');
+    worker.onmessage = () => {
       if (video.videoWidth === 0) {
         return;
       }
@@ -148,7 +149,7 @@ class RecordView {
         imageData,
         timestamp: Date.now()
       });
-    }, FRAME_DELAY);
+    };
 
     const redrawInterval = setInterval(() => m.redraw(), 1000);
 
@@ -160,7 +161,7 @@ class RecordView {
     track.addEventListener('ended', endedListener);
 
     this.onbeforeremove = () => {
-      clearInterval(frameInterval);
+      worker.terminate();
       clearInterval(redrawInterval);
       track.removeEventListener('ended', endedListener);
       track.stop();
