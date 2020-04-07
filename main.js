@@ -19,6 +19,25 @@ function humanSize(size) {
   return size < 1024 ? `${size} KB` : `${Math.floor(size / 1024 * 100) / 100} MB`;
 }
 
+function getFrameIndex(frames, timestamp, start = 0, end = frames.length - 1) {
+  const gap = end - start;
+
+  if (gap === 0) {
+    return start;
+  } else if (gap === 1) {
+    return timestamp < frames[end].timestamp ? start : end;
+  }
+
+  const mid = Math.floor((end + start) / 2);
+  const midTimestamp = frames[mid].timestamp;
+
+  if (timestamp === midTimestamp) {
+    return mid;
+  }
+
+  return timestamp < midTimestamp ? getFrameIndex(frames, timestamp, start, mid) : getFrameIndex(frames, timestamp, mid, end);
+}
+
 const Button = {
   view(vnode) {
     return m('button', {
@@ -165,6 +184,8 @@ class RecordView {
       clearInterval(redrawInterval);
       track.removeEventListener('ended', endedListener);
       track.stop();
+
+      this.recording.duration = this.recording.frames[this.recording.frames.length - 1].timestamp + FRAME_DELAY;
     };
 
     m.redraw();
@@ -204,14 +225,15 @@ class PreviewView {
     };
 
     this.playback = {
-      index: undefined,
-      disposable: undefined,
-      reset: false
+      head: 0,
+      start: 0,
+      end: this.recording.duration,
+      disposable: undefined
     };
 
     this.trim = {
       start: 0,
-      end: this.recording.frames.length - 1
+      end: this.recording.duration
     };
 
     this.crop = {
@@ -258,8 +280,8 @@ class PreviewView {
     const actions = [
       m(Button, { title: this.isPlaying ? 'Pause' : 'Play', iconset: 'material', icon: this.isPlaying ? 'pause' : 'play', primary: true, onclick: () => this.togglePlayPause() }),
       m('.playbar', [
-        m('input', { type: 'range', min: 0, max: `${this.recording.frames.length - 1}`, value: `${this.playback.index}`, disabled: this.isPlaying, oninput: e => this.onPlaybarInput(e) }),
-        m('.trim-bar', { style: { left: `${this.trim.start * 100 / (this.recording.frames.length - 1)}%`, width: `${(this.trim.end - this.trim.start) * 100 / (this.recording.frames.length - 1)}%` } }, [
+        m('input', { type: 'range', min: 0, max: `${this.recording.duration}`, value: `${this.playback.head}`, disabled: this.isPlaying, oninput: e => this.onPlaybarInput(e) }),
+        m('.trim-bar', { style: { left: `${this.trim.start * 100 / this.recording.duration}%`, width: `${(this.trim.end - this.trim.start) * 100 / this.recording.duration}%` } }, [
           m('.trim-start', { onmousedown: e => this.onTrimMouseDown('start', e) }),
           m('.trim-end', { onmousedown: e => this.onTrimMouseDown('end', e) }),
         ])
@@ -304,20 +326,15 @@ class PreviewView {
     const start = {
       width: this.playbar.clientWidth,
       screenX: event.screenX,
-      index: handle === 'start' ? this.trim.start : this.trim.end,
-      min: handle === 'start' ? 0 : this.trim.start + 1,
-      max: handle === 'start' ? this.trim.end - 1 : this.recording.frames.length - 1
+      head: handle === 'start' ? this.trim.start : this.trim.end,
+      min: handle === 'start' ? 0 : this.trim.start + FRAME_DELAY,
+      max: handle === 'start' ? this.trim.end - FRAME_DELAY : this.recording.duration
     };
 
     const onMouseMove = e => {
       const diff = e.screenX - start.screenX;
-      const index = start.index + Math.round(diff * (this.recording.frames.length - 1) / start.width);
-      const previous = this.trim[handle];
-      this.trim[handle] = Math.max(start.min, Math.min(start.max, index));
-
-      if (!this.isPlaying && previous !== this.trim[handle]) {
-        ctx.putImageData(this.recording.frames[this.trim[handle]].imageData, 0, 0);
-      }
+      const head = start.head + Math.round(diff * this.recording.duration / start.width);
+      this.trim[handle] = Math.max(start.min, Math.min(start.max, head));
 
       m.redraw();
     };
@@ -326,20 +343,19 @@ class PreviewView {
       document.body.removeEventListener('mousemove', onMouseMove);
       document.body.removeEventListener('mouseup', onMouseUp);
 
-      this.playback.reset = true;
+      this.playback.start = this.trim.start;
+      this.playback.end = this.trim.end;
 
       if (this.isPlaying) {
-        this.play();
-      } else {
-        ctx.putImageData(this.recording.frames[this.playback.index].imageData, 0, 0);
+        this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, this.playback.head));
+        this.playback.offset = Date.now() - this.playback.head + this.playback.start;
+
+        const index = getFrameIndex(this.recording.frames, this.playback.head);
+        ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
       }
 
       m.redraw();
     };
-
-    if (!this.isPlaying) {
-      ctx.putImageData(this.recording.frames[this.trim[handle]].imageData, 0, 0);
-    }
 
     document.body.addEventListener('mousemove', onMouseMove);
     document.body.addEventListener('mouseup', onMouseUp);
@@ -433,10 +449,11 @@ class PreviewView {
   }
 
   onPlaybarInput(e) {
-    this.playback.index = Number(e.target.value);
+    this.playback.head = e.target.valueAsNumber;
 
     const ctx = this.canvas.getContext('2d');
-    ctx.putImageData(this.recording.frames[this.playback.index].imageData, 0, 0);
+    const index = getFrameIndex(this.recording.frames, this.playback.head);
+    ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
   }
 
   play() {
@@ -444,30 +461,25 @@ class PreviewView {
       this.playback.disposable();
     }
 
-    if (this.playback.reset) {
-      this.playback.index = undefined;
-      this.playback.reset = false;
-    }
-
-    const range = {
-      start: this.trim.start,
-      end: this.trim.end
-    };
-
     const ctx = this.canvas.getContext('2d');
-    const duration = (range.end - range.start + 1) * FRAME_DELAY;
-    const start = range.start * FRAME_DELAY + Date.now() - ((this.playback.index || range.start) * FRAME_DELAY);
+
+    let lastIndex = undefined;
     let animationFrame = undefined;
 
-    const draw = () => {
-      const index = range.start + Math.floor(((Date.now() - start) % duration) / FRAME_DELAY);
+    this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, this.playback.head));
+    this.playback.offset = Date.now() - this.playback.head + this.playback.start;
 
-      if (this.playback.index !== index) {
+    const draw = () => {
+      this.playback.head = this.playback.start + (Date.now() - this.playback.offset) % (this.playback.end - this.playback.start);
+
+      const index = getFrameIndex(this.recording.frames, this.playback.head);
+
+      if (lastIndex !== index) {
         ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
-        m.redraw();
       }
 
-      this.playback.index = index;
+      lastIndex = index;
+      m.redraw();
       animationFrame = requestAnimationFrame(draw);
     };
 
@@ -521,7 +533,7 @@ class RenderView {
 
     gif.once('finished', blob => {
       this.app.setRenderedRecording({
-        duration: this.recording.frames[this.recording.frames.length - 1].timestamp + FRAME_DELAY,
+        duration: this.trim.end - this.trim.start,
         size: blob.size,
         url: URL.createObjectURL(blob),
       });
@@ -529,9 +541,11 @@ class RenderView {
     });
 
     const ctx = isCropped && vnode.dom.getElementsByTagName('canvas')[0].getContext('2d');
-    let previousTimestamp = 0;
+    const start = getFrameIndex(this.recording.frames, this.trim.start);
+    const end = getFrameIndex(this.recording.frames, this.trim.end);
+    let previousTimestamp = this.recording.frames[start].timestamp;
 
-    for (let i = this.trim.start; i <= this.trim.end; i++) {
+    for (let i = start; i <= end; i++) {
       let { imageData, timestamp } = this.recording.frames[i];
 
       if (isCropped) {
@@ -539,7 +553,8 @@ class RenderView {
         imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
       }
 
-      gif.addFrame(imageData, { delay: previousTimestamp === 0 ? 0 : timestamp - previousTimestamp });
+      console.log(timestamp - previousTimestamp);
+      gif.addFrame(imageData, { delay: timestamp - previousTimestamp });
       previousTimestamp = timestamp;
     }
 
