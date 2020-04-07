@@ -147,7 +147,7 @@ class RecordView {
 
       this.recording.frames.push({
         imageData,
-        timestamp: Date.now()
+        timestamp: first ? 0 : Date.now() - this.startTime
       });
     };
 
@@ -521,7 +521,7 @@ class RenderView {
 
     gif.once('finished', blob => {
       this.app.setRenderedRecording({
-        duration: this.recording.frames[this.recording.frames.length - 1].timestamp - this.recording.frames[0].timestamp,
+        duration: this.recording.frames[this.recording.frames.length - 1].timestamp + FRAME_DELAY,
         size: blob.size,
         url: URL.createObjectURL(blob),
       });
