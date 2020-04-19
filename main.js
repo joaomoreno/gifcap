@@ -143,6 +143,8 @@ class RecordView {
     const ctx = canvas.getContext('2d');
 
     const worker = new Worker('ticker.js');
+    let sourceWidth, sourceHeight, width, height;
+
     worker.onmessage = () => {
       if (video.videoWidth === 0) {
         return;
@@ -151,8 +153,10 @@ class RecordView {
       const first = typeof this.startTime === 'undefined';
 
       if (first) {
-        const width = video.videoWidth;
-        const height = video.videoHeight;
+        sourceWidth = video.videoWidth;
+        sourceHeight = video.videoHeight;
+        width = sourceWidth / window.devicePixelRatio;
+        height = sourceHeight / window.devicePixelRatio;
 
         this.startTime = Date.now();
         this.recording.width = width;
@@ -161,8 +165,8 @@ class RecordView {
         canvas.height = `${height}`;
       }
 
-      ctx.drawImage(video, 0, 0);
-      const imageData = ctx.getImageData(0, 0, this.recording.width, this.recording.height);
+      ctx.drawImage(video, 0, 0, sourceWidth, sourceHeight, 0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, height);
 
       this.recording.frames.push({
         imageData,
