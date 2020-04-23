@@ -1,3 +1,3 @@
 [submodule "vendor/libimagequant"]
-	path = vendor/libimagequant
+	path = encoder/vendor/libimagequant
 	url = https://github.com/joaomoreno/libimagequant.git
