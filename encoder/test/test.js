@@ -10,14 +10,12 @@ function main() {
   ctx.drawImage(image, 0, 0);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  const start = Date.now();
-
   const byteLength = imageData.data.byteLength;
   const ptr = Module._malloc(byteLength);
+
+  const start = Date.now();
   const buffer = new Uint8Array(Module.HEAPU8.buffer, ptr, byteLength);
   buffer.set(imageData);
-
   const result = encode(ptr, imageData.width, imageData.height);
 
   console.log(`took ${Date.now() - start}ms`);
