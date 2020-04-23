@@ -16,10 +16,7 @@ function main() {
   const byteLength = imageData.data.byteLength;
   const ptr = Module._malloc(byteLength);
   const buffer = new Uint8Array(Module.HEAPU8.buffer, ptr, byteLength);
-
-  for (let i = 0; i < byteLength; i++) {
-    buffer[i] = imageData.data[i];
-  }
+  buffer.set(imageData);
 
   const result = encode(ptr, imageData.width, imageData.height);
 
