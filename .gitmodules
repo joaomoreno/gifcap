@@ -1,0 +1,3 @@
+[submodule "vendor/libimagequant"]
+	path = vendor/libimagequant
+	url = https://github.com/joaomoreno/libimagequant.git
