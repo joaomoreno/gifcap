@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "libimagequant.h": "c",
+    "stdlib.h": "c"
+  }
+}
