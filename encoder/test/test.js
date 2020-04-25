@@ -15,7 +15,8 @@ function main() {
 
   const start = Date.now();
   const buffer = new Uint8Array(Module.HEAPU8.buffer, ptr, byteLength);
-  buffer.set(imageData);
+  buffer.set(imageData.data);
+
   const result = encode(ptr, imageData.width, imageData.height);
 
   console.log(`took ${Date.now() - start}ms`);

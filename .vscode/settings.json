@@ -1,6 +1,8 @@
 {
   "files.associations": {
     "libimagequant.h": "c",
-    "stdlib.h": "c"
+    "stdlib.h": "c",
+    "cstdlib": "c",
+    "stdio.h": "c"
   }
 }
