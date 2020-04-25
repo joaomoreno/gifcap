@@ -1,0 +1,2 @@
+#!/bin/sh
+cd vendor/libimagequant && ./configure --disable-sse CC=emcc
