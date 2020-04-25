@@ -1,6 +1,14 @@
 CC=emcc
-CFLAGS=-O2 -Ivendor/libimagequant -Ivendor/gifsicle/src -Ivendor/gifsicle/include/lcdf -Ivendor/gifsicle/include/lcdfgif
-LIBS=vendor/libimagequant/*.o
+CFLAGS=-O2 \
+	-Ivendor/libimagequant \
+	-Ivendor/gifsicle/src \
+	-Ivendor/gifsicle/include
+LIBS=vendor/libimagequant/*.o \
+	vendor/gifsicle/src/giffunc.o \
+	vendor/gifsicle/src/fmalloc.o \
+	vendor/gifsicle/src/support.o \
+	vendor/gifsicle/src/gifwrite.o \
+	vendor/gifsicle/src/gifread.o
 
 encoder.js: encoder.c vendor/libimagequant/libimagequant.o vendor/gifsicle/gifsicle.o
 	$(CC) $(CFLAGS) -o $@ -s "EXPORTED_FUNCTIONS=['_main', '_encode']" encoder.c $(LIBS)

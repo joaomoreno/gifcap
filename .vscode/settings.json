@@ -3,6 +3,7 @@
     "libimagequant.h": "c",
     "stdlib.h": "c",
     "cstdlib": "c",
-    "stdio.h": "c"
+    "stdio.h": "c",
+    "gifsicle.h": "c"
   }
 }
