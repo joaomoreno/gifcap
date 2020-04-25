@@ -22,7 +22,9 @@ unsigned int encode(void *raw_image_data, int width, int height)
   gif_image->image_data = Gif_NewArray(uint8_t, width * height);
   gif_image->free_image_data = Gif_Free;
 
-  liq_write_remapped_image(res, image, gif_image->image_data, width * height);
+  liq_error err = liq_write_remapped_image(res, image, gif_image->image_data, width * height);
+
+  printf("first: %d %d %d %d %d %d %d %d %d %d %d\n", gif_image->image_data[0], gif_image->image_data[1], gif_image->image_data[2], gif_image->image_data[3], gif_image->image_data[4], gif_image->image_data[5], gif_image->image_data[6], gif_image->image_data[7], gif_image->image_data[8], gif_image->image_data[9], gif_image->image_data[10]);
 
   const liq_palette *pal = liq_get_palette(res);
 
@@ -46,13 +48,6 @@ unsigned int encode(void *raw_image_data, int width, int height)
   FILE *file = fopen("/output.gif", "wb");
   Gif_WriteFile(gif_stream, file);
   fclose(file);
-
-  FILE *read_file = fopen("/output.gif", "r");
-  uint8_t data[10];
-  fread(data, sizeof(uint8_t), 10, read_file);
-  fclose(read_file);
-
-  printf("bytes %02X %02X %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3], data[4], data[5]);
 
   return pal->count;
 

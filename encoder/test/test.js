@@ -18,29 +18,17 @@ function main() {
   const buffer = new Uint8Array(Module.HEAPU8.buffer, ptr, byteLength);
   buffer.set(imageData.data);
 
-  const result = encode(ptr, imageData.width, imageData.height);
+  encode(ptr, imageData.width, imageData.height);
 
   console.log(`took ${Date.now() - start}ms`);
-  console.log(result);
 
   console.log('stat', FS.stat('/output.gif'));
-
-  var stream = FS.open('/output.gif', 'r');
-  var buf = new Uint8Array(4);
-  FS.read(stream, buf, 0, 4, 0);
-  FS.close(stream);
-  console.log('BUF', buf[0]);
-
-
-
 
   const outputBuffer = FS.readFile('/output.gif');
   console.log(outputBuffer);
 
   const blob = new Blob([outputBuffer], { type: 'image/gif' });
   console.log(blob);
-
-  blob.arrayBuffer().then(b => console.log(b));
 
   const url = URL.createObjectURL(blob);
   console.log(url);
