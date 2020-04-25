@@ -16,4 +16,4 @@ vendor/gifsicle/gifsicle.o:
 clean:
 	cd vendor/libimagequant && make clean
 	cd vendor/gifsicle && make clean
-	rm encoder.js
+	rm -f encoder.js encoder.wasm
