@@ -1,5 +1,5 @@
 CC=emcc
-CFLAGS=-O2 -Ivendor/libimagequant
+CFLAGS=-O2 -Ivendor/libimagequant -Ivendor/gifsicle/src -Ivendor/gifsicle/include/lcdf -Ivendor/gifsicle/include/lcdfgif
 LIBS=vendor/libimagequant/*.o
 
 encoder.js: encoder.c vendor/libimagequant/libimagequant.o vendor/gifsicle/gifsicle.o
