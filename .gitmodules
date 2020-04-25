@@ -1,3 +1,6 @@
 [submodule "vendor/libimagequant"]
 	path = encoder/vendor/libimagequant
 	url = https://github.com/joaomoreno/libimagequant.git
+[submodule "encoder/vendor/gifsicle"]
+	path = encoder/vendor/gifsicle
+	url = https://github.com/joaomoreno/gifsicle.git
