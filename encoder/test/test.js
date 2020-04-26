@@ -17,21 +17,12 @@ function main() {
   const start = Date.now();
   const buffer = new Uint8Array(Module.HEAPU8.buffer, ptr, byteLength);
   buffer.set(imageData.data);
-
   encode(ptr, imageData.width, imageData.height);
-
   console.log(`took ${Date.now() - start}ms`);
 
-  console.log('stat', FS.stat('/output.gif'));
-
   const outputBuffer = FS.readFile('/output.gif');
-  console.log(outputBuffer);
-
   const blob = new Blob([outputBuffer], { type: 'image/gif' });
-  console.log(blob);
-
   const url = URL.createObjectURL(blob);
-  console.log(url);
 
   output.src = url;
 }
