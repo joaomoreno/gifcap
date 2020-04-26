@@ -2,12 +2,20 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "HTTP Server",
+      "label": "Make",
       "type": "shell",
       "group": {
         "kind": "build",
         "isDefault": true
       },
+      "options": {
+        "cwd": "${workspaceFolder}/encoder",
+      },
+      "command": "source ~/Code/emsdk/emsdk_env.sh && make"
+    },
+    {
+      "label": "HTTP Server",
+      "type": "shell",
       "command": "npx http-server"
     }
   ]
