@@ -5,5 +5,10 @@
     "cstdlib": "c",
     "stdio.h": "c",
     "gifsicle.h": "c"
-  }
+  },
+  "git.detectSubmodules": false,
+  "git.ignoredRepositories": [
+    "encoder/vendor/gifsicle",
+    "encoder/vendor/libimagequant"
+  ]
 }
