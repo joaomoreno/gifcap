@@ -19,12 +19,9 @@ unsigned int encode(void *raw_image_data, int width, int height)
   Gif_Image *gif_image = Gif_NewImage();
   gif_image->width = width;
   gif_image->height = height;
-  gif_image->image_data = Gif_NewArray(uint8_t, width * height);
-  gif_image->free_image_data = Gif_Free;
+  Gif_CreateUncompressedImage(gif_image, 0);
 
   liq_error err = liq_write_remapped_image(res, image, gif_image->image_data, width * height);
-
-  printf("first: %d %d %d %d %d %d %d %d %d %d %d\n", gif_image->image_data[0], gif_image->image_data[1], gif_image->image_data[2], gif_image->image_data[3], gif_image->image_data[4], gif_image->image_data[5], gif_image->image_data[6], gif_image->image_data[7], gif_image->image_data[8], gif_image->image_data[9], gif_image->image_data[10]);
 
   const liq_palette *pal = liq_get_palette(res);
 
@@ -38,11 +35,16 @@ unsigned int encode(void *raw_image_data, int width, int height)
     gif_colormap->col[i].gfc_red = color.r;
     gif_colormap->col[i].gfc_green = color.g;
     gif_colormap->col[i].gfc_blue = color.b;
+    gif_colormap->col[i].haspixel = 0;
+    // printf("color: %d %d %d %d\n", i, color.r, color.g, color.b);
   }
 
-  gif_image->local = gif_colormap;
-
   Gif_Stream *gif_stream = Gif_NewStream();
+  gif_stream->global = gif_colormap;
+  gif_stream->global->refcount = 1;
+  gif_stream->screen_width = width;
+  gif_stream->screen_height = height;
+
   Gif_AddImage(gif_stream, gif_image);
 
   FILE *file = fopen("/output.gif", "wb");
