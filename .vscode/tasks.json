@@ -9,14 +9,15 @@
         "isDefault": true
       },
       "options": {
-        "cwd": "${workspaceFolder}/encoder",
+        "cwd": "${workspaceFolder}/encoder"
       },
       "command": "source ~/Code/emsdk/emsdk_env.sh && make"
     },
     {
       "label": "HTTP Server",
       "type": "shell",
-      "command": "npx http-server"
+      "command": "npx http-server",
+      "problemMatcher": []
     }
   ]
 }
