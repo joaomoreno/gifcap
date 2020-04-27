@@ -76,19 +76,6 @@ unsigned int encode(void *one, void *two, void *three, int width, int height)
   Gif_AddImage(gif_stream, gif_image_two);
   Gif_AddImage(gif_stream, gif_image_three);
 
-  Gt_Frame *gif_frame = Gif_New(Gt_Frame);
-  gif_frame->input_filename = "";
-  gif_frame->no_extensions = 1;
-  gif_frame->no_app_extensions = 1;
-  gif_frame->extensions = NULL;
-
-  // merge_image(gif_stream, NULL, gif_image, gif_frame, 0);
-
-  // do_colormap_change()
-  //   colormap_stream() -> unify color palettes
-  //  merge_and_write_frames()
-  //    merge_frame_interval()
-
   Gif_CompressInfo gif_write_info;
   Gif_InitCompressInfo(&gif_write_info);
   gif_write_info.loss = 20;
@@ -97,7 +84,6 @@ unsigned int encode(void *one, void *two, void *three, int width, int height)
   Gif_FullWriteFile(gif_stream, &gif_write_info, file);
   fclose(file);
 
-  Gif_Delete(gif_frame);
   Gif_Delete(gif_stream);
   Gif_Delete(gif_image_one);
   Gif_Delete(colormap);
