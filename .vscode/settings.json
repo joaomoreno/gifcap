@@ -4,7 +4,8 @@
     "stdlib.h": "c",
     "cstdlib": "c",
     "stdio.h": "c",
-    "gifsicle.h": "c"
+    "gifsicle.h": "c",
+    "gif.h": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [
