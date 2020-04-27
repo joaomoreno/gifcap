@@ -6,7 +6,8 @@
     "stdio.h": "c",
     "gifsicle.h": "c",
     "gif.h": "c",
-    "emscripten.h": "c"
+    "emscripten.h": "c",
+    "ios": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [

@@ -4,50 +4,66 @@
 #include <lcdfgif/gif.h>
 #include <gifsicle.h>
 #include <emscripten.h>
+#include <string.h>
+
+typedef struct encoder
+{
+  liq_attr *attr;
+  liq_image **images;
+  int image_count;
+  int image_cap;
+  int width;
+  int height;
+} encoder;
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int encode(void *one, void *two, void *three, int width, int height)
+encoder *encoder_new(int width, int height)
 {
-  liq_attr *attr = liq_attr_create();
-  liq_image *image_one = liq_image_create_rgba(attr, one, width, height, 0);
-  liq_image *image_two = liq_image_create_rgba(attr, two, width, height, 0);
-  liq_image *image_three = liq_image_create_rgba(attr, three, width, height, 0);
+  encoder *result = malloc(sizeof(encoder));
+  result->attr = liq_attr_create();
+  result->images = calloc(10, sizeof(liq_image *));
+  result->image_count = 0;
+  result->image_cap = 10;
+  result->width = width;
+  result->height = height;
+  return result;
+}
 
-  liq_histogram *histogram = liq_histogram_create(attr);
-  liq_histogram_add_image(histogram, attr, image_one);
-  liq_histogram_add_image(histogram, attr, image_two);
-  liq_histogram_add_image(histogram, attr, image_three);
+EMSCRIPTEN_KEEPALIVE
+void encoder_add_frame(encoder *enc, void *image_data)
+{
+  if (enc->image_cap == enc->image_count)
+  {
+    int cap = enc->image_cap * 2;
+    liq_image **images = calloc(cap, sizeof(liq_image *));
+    memcpy(images, enc->images, enc->image_cap * sizeof(liq_image *));
+    free(enc->images);
+    enc->images = images;
+    enc->image_cap = cap;
+  }
+
+  enc->images[enc->image_count++] = liq_image_create_rgba(enc->attr, image_data, enc->width, enc->height, 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void encoder_encode(encoder *enc)
+{
+  liq_histogram *histogram = liq_histogram_create(enc->attr);
+
+  for (int i = 0; i < enc->image_count; i++)
+  {
+    liq_histogram_add_image(histogram, enc->attr, enc->images[i]);
+  }
 
   liq_result *res;
-  liq_error err = liq_histogram_quantize(histogram, attr, &res);
+  liq_error err = liq_histogram_quantize(histogram, enc->attr, &res);
 
-  Gif_Image *gif_image_one = Gif_NewImage();
-  gif_image_one->width = width;
-  gif_image_one->height = height;
-  gif_image_one->delay = 100;
-  Gif_CreateUncompressedImage(gif_image_one, 0);
-  liq_write_remapped_image(res, image_one, gif_image_one->image_data, width * height);
+  const liq_palette *palette = liq_get_palette(res);
+  Gif_Colormap *colormap = Gif_NewFullColormap(palette->count, palette->count);
 
-  Gif_Image *gif_image_two = Gif_NewImage();
-  gif_image_two->width = width;
-  gif_image_two->height = height;
-  gif_image_two->delay = 100;
-  Gif_CreateUncompressedImage(gif_image_two, 0);
-  liq_write_remapped_image(res, image_two, gif_image_two->image_data, width * height);
-
-  Gif_Image *gif_image_three = Gif_NewImage();
-  gif_image_three->width = width;
-  gif_image_three->height = height;
-  gif_image_three->delay = 100;
-  Gif_CreateUncompressedImage(gif_image_three, 0);
-  liq_write_remapped_image(res, image_three, gif_image_three->image_data, width * height);
-
-  const liq_palette *pal = liq_get_palette(res);
-  Gif_Colormap *colormap = Gif_NewFullColormap(pal->count, pal->count);
-
-  for (int i = 0; i < pal->count; i++)
+  for (int i = 0; i < palette->count; i++)
   {
-    liq_color color = pal->entries[i];
+    liq_color color = palette->entries[i];
     colormap->col[i].pixel = 256;
     colormap->col[i].gfc_red = color.r;
     colormap->col[i].gfc_green = color.g;
@@ -55,35 +71,36 @@ unsigned int encode(void *one, void *two, void *three, int width, int height)
     colormap->col[i].haspixel = 1;
   }
 
-  liq_result_destroy(res);
-  liq_histogram_destroy(histogram);
-  liq_image_destroy(one);
-  liq_image_destroy(two);
-  liq_image_destroy(three);
-  liq_attr_destroy(attr);
-
   Gif_Stream *gif_stream = Gif_NewStream();
-  gif_stream->screen_width = width;
-  gif_stream->screen_height = height;
+  gif_stream->screen_width = enc->width;
+  gif_stream->screen_height = enc->height;
   gif_stream->global = colormap;
   gif_stream->global->refcount = 1;
   gif_stream->loopcount = 0;
 
-  Gif_AddImage(gif_stream, gif_image_one);
-  Gif_AddImage(gif_stream, gif_image_two);
-  Gif_AddImage(gif_stream, gif_image_three);
+  for (int i = 0; i < enc->image_count; i++)
+  {
+    Gif_Image *image = Gif_NewImage();
+    image->width = enc->width;
+    image->height = enc->height;
+    image->delay = 100;
+    Gif_CreateUncompressedImage(image, 0);
+    liq_write_remapped_image(res, enc->images[i], image->image_data, enc->width * enc->height);
+    Gif_AddImage(gif_stream, image);
+  }
 
-  Gif_CompressInfo gif_write_info;
-  Gif_InitCompressInfo(&gif_write_info);
-  gif_write_info.loss = 20;
+  Gif_CompressInfo info;
+  Gif_InitCompressInfo(&info);
+  info.loss = 20;
 
   FILE *file = fopen("/output.gif", "wb");
-  Gif_FullWriteFile(gif_stream, &gif_write_info, file);
+  Gif_FullWriteFile(gif_stream, &info, file);
   fclose(file);
+}
 
-  Gif_Delete(gif_stream);
-  Gif_Delete(gif_image_one);
-  Gif_Delete(colormap);
-
-  return 0;
+EMSCRIPTEN_KEEPALIVE
+void encoder_free(encoder *enc)
+{
+  free(enc->images);
+  free(enc);
 }
