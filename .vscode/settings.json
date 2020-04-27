@@ -5,7 +5,8 @@
     "cstdlib": "c",
     "stdio.h": "c",
     "gifsicle.h": "c",
-    "gif.h": "c"
+    "gif.h": "c",
+    "emscripten.h": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [

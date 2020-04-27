@@ -3,12 +3,9 @@
 #include <libimagequant.h>
 #include <lcdfgif/gif.h>
 #include <gifsicle.h>
+#include <emscripten.h>
 
-int main()
-{
-  return 0;
-}
-
+EMSCRIPTEN_KEEPALIVE
 unsigned int encode(void *one, void *two, void *three, int width, int height)
 {
   liq_attr *attr = liq_attr_create();

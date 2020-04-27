@@ -11,7 +11,7 @@ LIBS=vendor/libimagequant/*.o \
 	vendor/gifsicle/src/gifread.o
 
 encoder.js: encoder.c vendor/libimagequant/libimagequant.o vendor/gifsicle/gifsicle.o
-	$(CC) $(CFLAGS) -o $@ -s "EXPORTED_FUNCTIONS=['_main', '_encode']" encoder.c $(LIBS)
+	$(CC) $(CFLAGS) -o $@ encoder.c $(LIBS)
 
 vendor/libimagequant/libimagequant.o:
 	cd vendor/libimagequant && make static
