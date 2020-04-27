@@ -71,12 +71,12 @@ void encoder_encode(encoder *enc)
     colormap->col[i].haspixel = 1;
   }
 
-  Gif_Stream *gif_stream = Gif_NewStream();
-  gif_stream->screen_width = enc->width;
-  gif_stream->screen_height = enc->height;
-  gif_stream->global = colormap;
-  gif_stream->global->refcount = 1;
-  gif_stream->loopcount = 0;
+  Gif_Stream *stream = Gif_NewStream();
+  stream->screen_width = enc->width;
+  stream->screen_height = enc->height;
+  stream->global = colormap;
+  stream->global->refcount = 1;
+  stream->loopcount = 0;
 
   for (int i = 0; i < enc->image_count; i++)
   {
@@ -86,16 +86,28 @@ void encoder_encode(encoder *enc)
     image->delay = 100;
     Gif_CreateUncompressedImage(image, 0);
     liq_write_remapped_image(res, enc->images[i], image->image_data, enc->width * enc->height);
-    Gif_AddImage(gif_stream, image);
+    Gif_AddImage(stream, image);
+    liq_image_destroy(enc->images[i]);
   }
+
+  liq_result_destroy(res);
+  liq_histogram_destroy(histogram);
+  liq_attr_destroy(enc->attr);
+  free(enc->images);
+  enc->image_count = 0;
+  enc->image_cap = 0;
 
   Gif_CompressInfo info;
   Gif_InitCompressInfo(&info);
   info.loss = 20;
 
   FILE *file = fopen("/output.gif", "wb");
-  Gif_FullWriteFile(gif_stream, &info, file);
+  Gif_FullWriteFile(stream, &info, file);
   fclose(file);
+
+  Gif_Delete(stream);
+  // TODO: free images?
+  Gif_Delete(colormap);
 }
 
 EMSCRIPTEN_KEEPALIVE
