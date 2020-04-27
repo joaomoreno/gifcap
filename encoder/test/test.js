@@ -29,8 +29,8 @@ function main() {
   const outputBuffer = FS.readFile('/output.gif');
   const blob = new Blob([outputBuffer], { type: 'image/gif' });
 
-  console.log(`gifsicle took ${Date.now() - startGifsicle}ms`);
-  console.log('gifsicle', blob);
+  const stats = document.getElementById('stats');
+  stats.innerHTML += `<p>gifsicle: ${Date.now() - startGifsicle}ms, ${blob.size} bytes</p>`;
 
   const url = URL.createObjectURL(blob);
   const gifsicle = document.getElementById('gifsicle');
@@ -40,7 +40,7 @@ function main() {
 
   const startGifjs = Date.now();
   const gif = new GIF({
-    workers: navigator.hardwareConcurrency,
+    workers: 1,
     quality: 10,
     width: canvas.width,
     height: canvas.height,
@@ -52,9 +52,7 @@ function main() {
   gif.addFrame(imageData[2], { delay: 1000 });
 
   gif.once('finished', blob => {
-    console.log(`gifjs took ${Date.now() - startGifjs}ms`);
-    console.log('gifjs', blob);
-
+    stats.innerHTML += `<p>gifjs ${Date.now() - startGifjs}ms, ${blob.size} bytes</p>`;
     const url = URL.createObjectURL(blob);
     const gifjs = document.getElementById('gifjs');
     gifjs.src = url;
