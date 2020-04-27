@@ -7,11 +7,18 @@
   <title>GIF Encoder</title>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <script src='../encoder.js'></script>
+  <style>
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
-  <img id="input" src="sample.png" />
-  <canvas id="canvas"></canvas>
+  <img id="one" class="hidden" src="one.png" />
+  <img id="two" class="hidden" src="two.png" />
+  <img id="three" class="hidden" src="three.png" />
+  <canvas id="canvas" class="hidden"></canvas>
   <img id="output" />
   <script src='test.js'></script>
 </body>
