@@ -1,22 +1,3 @@
-class GifEncoder {
-
-  constructor(width, height) {
-    const length = width * height * 4;
-    this.bufferPtr = Module._malloc(length);
-    this.buffer = new Uint8Array(Module.HEAPU8.buffer, this.bufferPtr, length);
-    this.encoder = Module['_encoder_new'](width, height);
-  }
-
-  addFrame(imageData) {
-    this.buffer.set(imageData.data);
-    Module['_encoder_add_frame'](this.encoder, this.bufferPtr);
-  }
-
-  encode() {
-    Module['_encoder_encode'](this.encoder);
-  }
-}
-
 function main() {
   const canvas = document.getElementById('canvas');
 
