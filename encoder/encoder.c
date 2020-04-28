@@ -105,9 +105,7 @@ void encoder_encode(encoder *enc)
   Gif_FullWriteFile(stream, &info, file);
   fclose(file);
 
-  Gif_Delete(stream);
-  // TODO: free images?
-  Gif_Delete(colormap);
+  Gif_DeleteStream(stream);
 }
 
 EMSCRIPTEN_KEEPALIVE
