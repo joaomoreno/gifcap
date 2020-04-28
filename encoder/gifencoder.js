@@ -1,31 +1,37 @@
 class GifEncoder {
 
   constructor(width, height) {
-    const length = width * height * 4;
-    this.bufferPtr = Module._malloc(length);
-    this.buffer = new Uint8Array(Module.HEAPU8.buffer, this.bufferPtr, length);
+    this.length = width * height * 4;
     this.encoder = Module['_encoder_new'](width, height);
+    this.ptrs = [];
   }
 
-  addFrame(imageData) {
-    if (!this.buffer) {
+  addFrame(imageData, delay) {
+    if (!this.encoder) {
       throw new Error('Encoder is disposed');
     }
 
-    this.buffer.set(imageData.data);
-    Module['_encoder_add_frame'](this.encoder, this.bufferPtr);
+    const ptr = Module._malloc(this.length);
+    const buffer = new Uint8Array(Module.HEAPU8.buffer, ptr, this.length);
+    buffer.set(imageData.data);
+    Module['_encoder_add_frame'](this.encoder, ptr, delay / 10);
+    this.ptrs.push(ptr);
   }
 
   encode() {
-    if (!this.buffer) {
+    if (!this.encoder) {
       throw new Error('Encoder is disposed');
     }
 
     Module['_encoder_encode'](this.encoder);
 
+    for (const ptr of this.ptrs) {
+      Module._free(ptr);
+    }
+
     this.encoder = null;
-    this.buffer = null;
-    Module._free(this.bufferPtr);
-    this.bufferPtr = null;
+
+    const buffer = FS.readFile('/output.gif');
+    return new Blob([buffer], { type: 'image/gif' });
   }
 }

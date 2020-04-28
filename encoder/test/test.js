@@ -17,15 +17,12 @@ function main() {
   });
 
   for (const img of imageData) {
-    encoder.addFrame(img);
+    encoder.addFrame(img, 1000);
   }
 
   const startGifsicle = Date.now();
 
-  encoder.encode();
-
-  const outputBuffer = FS.readFile('/output.gif');
-  const blob = new Blob([outputBuffer], { type: 'image/gif' });
+  const blob = encoder.encode();
 
   const stats = document.getElementById('stats');
   stats.innerHTML += `<p>gifsicle: ${Date.now() - startGifsicle}ms, ${blob.size} bytes</p>`;

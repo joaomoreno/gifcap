@@ -6,12 +6,18 @@
 #include <emscripten.h>
 #include <string.h>
 
+typedef struct frame
+{
+  liq_image *image;
+  int delay;
+} frame;
+
 typedef struct encoder
 {
   liq_attr *attr;
-  liq_image **images;
-  int image_count;
-  int image_cap;
+  frame **frames;
+  int frame_count;
+  int frame_cap;
   int width;
   int height;
 } encoder;
@@ -21,28 +27,32 @@ encoder *encoder_new(int width, int height)
 {
   encoder *result = malloc(sizeof(encoder));
   result->attr = liq_attr_create();
-  result->images = calloc(10, sizeof(liq_image *));
-  result->image_count = 0;
-  result->image_cap = 10;
+  result->frames = calloc(10, sizeof(liq_image *));
+  result->frame_count = 0;
+  result->frame_cap = 10;
   result->width = width;
   result->height = height;
   return result;
 }
 
 EMSCRIPTEN_KEEPALIVE
-void encoder_add_frame(encoder *enc, void *image_data)
+void encoder_add_frame(encoder *enc, void *image_data, int delay)
 {
-  if (enc->image_cap == enc->image_count)
+  if (enc->frame_cap == enc->frame_count)
   {
-    int cap = enc->image_cap * 2;
-    liq_image **images = calloc(cap, sizeof(liq_image *));
-    memcpy(images, enc->images, enc->image_cap * sizeof(liq_image *));
-    free(enc->images);
-    enc->images = images;
-    enc->image_cap = cap;
+    int cap = enc->frame_cap * 2;
+    frame **frames = calloc(cap, sizeof(frame *));
+    memcpy(frames, enc->frames, enc->frame_cap * sizeof(frame *));
+    free(enc->frames);
+    enc->frames = frames;
+    enc->frame_cap = cap;
   }
 
-  enc->images[enc->image_count++] = liq_image_create_rgba(enc->attr, image_data, enc->width, enc->height, 0);
+  frame *f = malloc(sizeof(frame));
+  f->image = liq_image_create_rgba(enc->attr, image_data, enc->width, enc->height, 0);
+  f->delay = delay;
+
+  enc->frames[enc->frame_count++] = f;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -50,9 +60,9 @@ void encoder_encode(encoder *enc)
 {
   liq_histogram *histogram = liq_histogram_create(enc->attr);
 
-  for (int i = 0; i < enc->image_count; i++)
+  for (int i = 0; i < enc->frame_count; i++)
   {
-    liq_histogram_add_image(histogram, enc->attr, enc->images[i]);
+    liq_histogram_add_image(histogram, enc->attr, enc->frames[i]->image);
   }
 
   liq_result *res;
@@ -78,24 +88,25 @@ void encoder_encode(encoder *enc)
   stream->global->refcount = 1;
   stream->loopcount = 0;
 
-  for (int i = 0; i < enc->image_count; i++)
+  for (int i = 0; i < enc->frame_count; i++)
   {
     Gif_Image *image = Gif_NewImage();
     image->width = enc->width;
     image->height = enc->height;
-    image->delay = 100;
+    image->delay = enc->frames[i]->delay;
     Gif_CreateUncompressedImage(image, 0);
-    liq_write_remapped_image(res, enc->images[i], image->image_data, enc->width * enc->height);
+    liq_write_remapped_image(res, enc->frames[i]->image, image->image_data, enc->width * enc->height);
     Gif_AddImage(stream, image);
-    liq_image_destroy(enc->images[i]);
+    liq_image_destroy(enc->frames[i]->image);
+    free(enc->frames[i]);
   }
 
   liq_result_destroy(res);
   liq_histogram_destroy(histogram);
   liq_attr_destroy(enc->attr);
-  free(enc->images);
-  enc->image_count = 0;
-  enc->image_cap = 0;
+  free(enc->frames);
+  enc->frame_count = 0;
+  enc->frame_cap = 0;
 
   Gif_CompressInfo info;
   Gif_InitCompressInfo(&info);
@@ -111,6 +122,6 @@ void encoder_encode(encoder *enc)
 EMSCRIPTEN_KEEPALIVE
 void encoder_free(encoder *enc)
 {
-  free(enc->images);
+  free(enc->frames);
   free(enc);
 }
