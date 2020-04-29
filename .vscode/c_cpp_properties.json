@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "~/Code/emsdk/upstream/emscripten/system/include"
+            ],
+            "defines": [
+                "HAVE_SYS_TYPES_H=1",
+                "HAVE_U_INT_TYPES=1"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

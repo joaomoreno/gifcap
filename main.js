@@ -507,12 +507,9 @@ class RenderView {
 
   async oncreate(vnode) {
     const isCropped = this.crop.top !== 0 || this.crop.left !== 0 || this.crop.width !== this.recording.width || this.crop.height !== this.recording.height;
-    const gif = new GIF({
-      workers: navigator.hardwareConcurrency,
-      quality: 10,
+    const gif = new GifEncoder({
       width: this.crop.width,
       height: this.crop.height,
-      workerScript: 'gif.worker.js',
     });
 
     gif.on('progress', progress => {
@@ -532,7 +529,6 @@ class RenderView {
     const ctx = isCropped && vnode.dom.getElementsByTagName('canvas')[0].getContext('2d');
     const start = getFrameIndex(this.recording.frames, this.trim.start);
     const end = getFrameIndex(this.recording.frames, this.trim.end);
-    let previousTimestamp = this.recording.frames[start].timestamp;
 
     for (let i = start; i <= end; i++) {
       let { imageData, timestamp } = this.recording.frames[i];
@@ -542,8 +538,8 @@ class RenderView {
         imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
       }
 
-      gif.addFrame(imageData, { delay: timestamp - previousTimestamp });
-      previousTimestamp = timestamp;
+      const delay = i < end ? this.recording.frames[i + 1].timestamp - timestamp : 100;
+      gif.addFrame(imageData, delay);
     }
 
     this.onbeforeremove = () => {
