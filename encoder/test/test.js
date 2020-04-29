@@ -7,7 +7,10 @@ function main() {
   canvas.width = images[0].width;
   canvas.height = images[0].height;
 
-  const encoder = new GifEncoder(canvas.width, canvas.height);
+  const encoder = new GifEncoder({
+    width: canvas.width,
+    height: canvas.height
+  });
 
   const ctx = canvas.getContext('2d');
 
