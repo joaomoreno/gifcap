@@ -507,12 +507,9 @@ class RenderView {
 
   async oncreate(vnode) {
     const isCropped = this.crop.top !== 0 || this.crop.left !== 0 || this.crop.width !== this.recording.width || this.crop.height !== this.recording.height;
-    const gif = new GIF({
-      workers: navigator.hardwareConcurrency,
-      quality: 10,
+    const gif = new GifEncoder({
       width: this.crop.width,
       height: this.crop.height,
-      workerScript: 'gif.worker.js',
     });
 
     gif.on('progress', progress => {
