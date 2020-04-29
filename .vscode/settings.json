@@ -7,7 +7,8 @@
     "gifsicle.h": "c",
     "gif.h": "c",
     "emscripten.h": "c",
-    "ios": "c"
+    "ios": "c",
+    "limits": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [
