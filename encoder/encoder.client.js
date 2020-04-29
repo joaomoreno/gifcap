@@ -1,42 +1,47 @@
 class GifEncoder {
 
   constructor(opts) {
+    this.opts = opts;
     this.listeners = new Map();
-    this.worker = new Promise(c => {
-      const worker = new Worker(opts.workerScript);
-
-      worker.addEventListener('message', msg => {
-        switch (msg.data.type) {
-          case 'ready':
-            worker.postMessage({ type: 'init', width: opts.width, height: opts.height });
-            c(worker);
-            break;
-          case 'progress':
-            this._emit('progress', msg.data.progress);
-            break;
-          case 'finished':
-            this._emit('finished', msg.data.blob);
-            this.worker = null;
-            break;
-        }
-      });
-    });
+    this.frames = [];
+    this.imageData = [];
   }
 
   addFrame(imageData, delay) {
-    if (!this.worker) {
-      throw new Error('Encoder is disposed');
-    }
-
-    this.worker.then(worker => worker.postMessage({ type: 'addFrame', imageData: imageData.data.buffer, delay }, { transfer: [imageData.data.buffer] }));
+    this.frames.push({ imageData: imageData.data.buffer, delay });
+    this.imageData.push(imageData.data.buffer);
   }
 
-  encode() {
-    if (!this.worker) {
-      throw new Error('Encoder is disposed');
+  render() {
+    if (this.worker) {
+      return;
     }
 
-    this.worker.then(worker => worker.postMessage({ type: 'encode' }));
+    this.worker = new Worker('/encoder/encoder.worker.js');
+
+    this.worker.addEventListener('message', msg => {
+      switch (msg.data.type) {
+        case 'progress':
+          this._emit('progress', msg.data.progress);
+          break;
+        case 'finished':
+          this.worker = null;
+          this._emit('finished', msg.data.blob);
+          break;
+      }
+    });
+
+    this.worker.postMessage({ frames: this.frames, ...this.opts }, { transfer: this.imageData });
+
+    this.imageData = [];
+    this.delays = [];
+  }
+
+  abort() {
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
   }
 
   on(event, fn) {
