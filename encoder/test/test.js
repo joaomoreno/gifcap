@@ -34,7 +34,7 @@ function main() {
     gifsicle.src = url;
   });
 
-  encoder.encode();
+  encoder.render();
 
   // JS GIF
 

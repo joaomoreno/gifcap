@@ -1,4 +1,4 @@
-importScripts('encoder.js');
+importScripts('/encoder/out/encoder.js');
 
 let msg = undefined;
 let initialized = false;
@@ -10,7 +10,6 @@ function main() {
 
   const length = msg.data.width * msg.data.height * 4;
   const encoder = Module['_encoder_new'](msg.data.width, msg.data.height);
-
 
   for (let i = 0; i < msg.data.frames.length; i++) {
     const frame = msg.data.frames[i];
