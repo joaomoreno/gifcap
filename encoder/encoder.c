@@ -6,18 +6,10 @@
 #include <emscripten.h>
 #include <string.h>
 
-typedef struct frame
-{
-  liq_image *image;
-  int delay;
-} frame;
-
 typedef struct encoder
 {
   liq_attr *attr;
-  frame **frames;
-  int frame_count;
-  int frame_cap;
+  Gif_Stream *stream;
   int width;
   int height;
 } encoder;
@@ -25,50 +17,21 @@ typedef struct encoder
 EMSCRIPTEN_KEEPALIVE
 encoder *encoder_new(int width, int height)
 {
+  Gif_Stream *stream = Gif_NewStream();
+  stream->screen_width = width;
+  stream->screen_height = height;
+  stream->loopcount = 0;
+
   encoder *result = malloc(sizeof(encoder));
   result->attr = liq_attr_create();
-  result->frames = calloc(10, sizeof(liq_image *));
-  result->frame_count = 0;
-  result->frame_cap = 10;
+  result->stream = stream;
   result->width = width;
   result->height = height;
   return result;
 }
 
-EMSCRIPTEN_KEEPALIVE
-void encoder_add_frame(encoder *enc, void *image_data, int delay)
+inline Gif_Colormap *create_colormap_from_palette(const liq_palette *palette)
 {
-  if (enc->frame_cap == enc->frame_count)
-  {
-    int cap = enc->frame_cap * 2;
-    frame **frames = calloc(cap, sizeof(frame *));
-    memcpy(frames, enc->frames, enc->frame_cap * sizeof(frame *));
-    free(enc->frames);
-    enc->frames = frames;
-    enc->frame_cap = cap;
-  }
-
-  frame *f = malloc(sizeof(frame));
-  f->image = liq_image_create_rgba(enc->attr, image_data, enc->width, enc->height, 0);
-  f->delay = delay;
-
-  enc->frames[enc->frame_count++] = f;
-}
-
-EMSCRIPTEN_KEEPALIVE
-void encoder_encode(encoder *enc)
-{
-  liq_histogram *histogram = liq_histogram_create(enc->attr);
-
-  for (int i = 0; i < enc->frame_count; i++)
-  {
-    liq_histogram_add_image(histogram, enc->attr, enc->frames[i]->image);
-  }
-
-  liq_result *res;
-  liq_error err = liq_histogram_quantize(histogram, enc->attr, &res);
-
-  const liq_palette *palette = liq_get_palette(res);
   Gif_Colormap *colormap = Gif_NewFullColormap(palette->count, palette->count);
 
   for (int i = 0; i < palette->count; i++)
@@ -81,47 +44,49 @@ void encoder_encode(encoder *enc)
     colormap->col[i].haspixel = 1;
   }
 
-  Gif_Stream *stream = Gif_NewStream();
-  stream->screen_width = enc->width;
-  stream->screen_height = enc->height;
-  stream->global = colormap;
-  stream->global->refcount = 1;
-  stream->loopcount = 0;
+  return colormap;
+}
 
-  for (int i = 0; i < enc->frame_count; i++)
-  {
-    Gif_Image *image = Gif_NewImage();
-    image->width = enc->width;
-    image->height = enc->height;
-    image->delay = enc->frames[i]->delay;
-    Gif_CreateUncompressedImage(image, 0);
-    liq_write_remapped_image(res, enc->frames[i]->image, image->image_data, enc->width * enc->height);
-    Gif_AddImage(stream, image);
-    liq_image_destroy(enc->frames[i]->image);
-    free(enc->frames[i]);
-  }
+EMSCRIPTEN_KEEPALIVE
+void encoder_add_frame(encoder *enc, void *image_data, int delay)
+{
+  liq_image *raw_image = liq_image_create_rgba(enc->attr, image_data, enc->width, enc->height, 0);
+  liq_result *res = liq_quantize_image(enc->attr, raw_image);
+  const liq_palette *palette = liq_get_palette(res);
+
+  Gif_Image *image = Gif_NewImage();
+  image->width = enc->width;
+  image->height = enc->height;
+  image->delay = delay;
+  image->local = create_colormap_from_palette(palette);
+
+  Gif_CreateUncompressedImage(image, 0);
+  liq_write_remapped_image(res, raw_image, image->image_data, enc->width * enc->height);
+  Gif_AddImage(enc->stream, image);
 
   liq_result_destroy(res);
-  liq_histogram_destroy(histogram);
+  liq_image_destroy(raw_image);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void encoder_encode(encoder *enc)
+{
   liq_attr_destroy(enc->attr);
-  free(enc->frames);
-  enc->frame_count = 0;
-  enc->frame_cap = 0;
 
   Gif_CompressInfo info;
   Gif_InitCompressInfo(&info);
   info.loss = 20;
 
   FILE *file = fopen("/output.gif", "wb");
-  Gif_FullWriteFile(stream, &info, file);
+  Gif_FullWriteFile(enc->stream, &info, file);
   fclose(file);
 
-  Gif_DeleteStream(stream);
+  Gif_DeleteStream(enc->stream);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void encoder_free(encoder *enc)
 {
-  free(enc->frames);
+  Gif_DeleteStream(enc->stream);
   free(enc);
 }
