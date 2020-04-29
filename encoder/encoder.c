@@ -71,8 +71,6 @@ void encoder_add_frame(encoder *enc, void *image_data, int delay)
 EMSCRIPTEN_KEEPALIVE
 void encoder_encode(encoder *enc)
 {
-  liq_attr_destroy(enc->attr);
-
   Gif_CompressInfo info;
   Gif_InitCompressInfo(&info);
   info.loss = 20;
@@ -82,11 +80,6 @@ void encoder_encode(encoder *enc)
   fclose(file);
 
   Gif_DeleteStream(enc->stream);
-}
-
-EMSCRIPTEN_KEEPALIVE
-void encoder_free(encoder *enc)
-{
-  Gif_DeleteStream(enc->stream);
+  liq_attr_destroy(enc->attr);
   free(enc);
 }
