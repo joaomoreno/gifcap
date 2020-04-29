@@ -84,13 +84,13 @@ class IdleView {
 
     if (this.app.recording) {
       content = m('.recording-card', [
-        m('a', { href: this.app.recording.url, target: '_blank' }, [
+        m('a', { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, [
           m('img.recording', { src: this.app.recording.url })
         ]),
         m('footer', [
           m(Timer, { duration: this.app.recording.duration }),
           m('span.tag.is-small', [
-            m('a.recording-detail', { href: this.app.recording.url, target: '_blank' }, [
+            m('a.recording-detail', { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, [
               m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
               humanSize(this.app.recording.size)
             ])
