@@ -1,4 +1,4 @@
-importScripts('/encoder/out/encoder.js');
+importScripts('/encoder/encoder.js');
 
 let msg = undefined;
 let initialized = false;
