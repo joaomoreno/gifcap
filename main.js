@@ -127,18 +127,7 @@ class RecordView {
     const video = vnode.dom.getElementsByTagName('video')[0];
     const canvas = vnode.dom.getElementsByTagName('canvas')[0];
 
-    let captureStream;
-
-    try {
-      captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-    } catch (err) {
-      console.error(err);
-      this.app.cancel();
-      m.redraw();
-      return;
-    }
-
-    video.srcObject = captureStream;
+    video.srcObject = this.recording.captureStream;
 
     const ctx = canvas.getContext('2d');
 
@@ -172,7 +161,7 @@ class RecordView {
 
     const redrawInterval = setInterval(() => m.redraw(), 1000);
 
-    const track = captureStream.getVideoTracks()[0];
+    const track = this.recording.captureStream.getVideoTracks()[0];
     const endedListener = () => {
       this.app.stopRecording();
       m.redraw();
@@ -596,17 +585,26 @@ class App {
     }
   }
 
-  startRecording() {
+  async startRecording() {
     if (this.recording && !window.confirm('This will discard the current recording, are you sure you want to continue?')) {
       return;
     }
 
-    this.state = 'recording';
-    this.recording = {
-      width: undefined,
-      height: undefined,
-      frames: []
-    };
+    try {
+      const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
+      this.state = 'recording';
+      this.recording = {
+        captureStream,
+        width: undefined,
+        height: undefined,
+        frames: []
+      };
+      m.redraw();
+    } catch (err) {
+      console.error(err);
+      return;
+    }
   }
 
   stopRecording() {
