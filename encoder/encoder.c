@@ -68,7 +68,7 @@ EMSCRIPTEN_KEEPALIVE
 void encoder_add_frame(encoder *enc, void *image_data, int delay)
 {
   liq_image *raw_image = liq_image_create_rgba(enc->attr, image_data, enc->width, enc->height, 0);
-  liq_result *res = liq_quantize_image(enc->attr, raw_image);
+  liq_result *res = liq_quantize_image(enc->attr, raw_image); // HEAVY
   const liq_palette *palette = liq_get_palette(res);
 
   Gif_Image *image = Gif_NewImage();
@@ -78,7 +78,7 @@ void encoder_add_frame(encoder *enc, void *image_data, int delay)
   image->local = create_colormap_from_palette(palette);
 
   Gif_CreateUncompressedImage(image, 0);
-  liq_write_remapped_image(res, raw_image, image->image_data, enc->width * enc->height);
+  liq_write_remapped_image(res, raw_image, image->image_data, enc->width * enc->height); // HEAVY
   Gif_CompressImage(enc->stream, image);
   Gif_ReleaseUncompressedImage(image);
   Gif_AddImage(enc->stream, image);
