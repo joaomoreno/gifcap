@@ -8,7 +8,8 @@
     "gif.h": "c",
     "emscripten.h": "c",
     "ios": "c",
-    "limits": "c"
+    "limits": "c",
+    "random": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [
