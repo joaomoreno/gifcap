@@ -12,6 +12,10 @@ typedef struct encoder
   Gif_Stream *stream;
   int width;
   int height;
+
+  Gif_CompressInfo *compress_info;
+  FILE *file;
+  Gif_Writer *writer;
 } encoder;
 
 EMSCRIPTEN_KEEPALIVE
@@ -22,11 +26,20 @@ encoder *encoder_new(int width, int height)
   stream->screen_height = height;
   stream->loopcount = 0;
 
+  Gif_CompressInfo *compress_info = malloc(sizeof(Gif_CompressInfo));
+  Gif_InitCompressInfo(compress_info);
+  compress_info->loss = 20;
+  FILE *file = fopen("/output.gif", "wb");
+  Gif_Writer *writer = Gif_IncrementalWriteFileInit(stream, compress_info, file);
+
   encoder *result = malloc(sizeof(encoder));
   result->attr = liq_attr_create();
   result->stream = stream;
   result->width = width;
   result->height = height;
+  result->compress_info = compress_info;
+  result->file = file;
+  result->writer = writer;
   return result;
 }
 
@@ -62,7 +75,10 @@ void encoder_add_frame(encoder *enc, void *image_data, int delay)
 
   Gif_CreateUncompressedImage(image, 0);
   liq_write_remapped_image(res, raw_image, image->image_data, enc->width * enc->height);
+  Gif_CompressImage(enc->stream, image);
+  Gif_ReleaseUncompressedImage(image);
   Gif_AddImage(enc->stream, image);
+  Gif_IncrementalWriteImage(enc->writer, enc->stream, image);
 
   liq_result_destroy(res);
   liq_image_destroy(raw_image);
@@ -71,14 +87,8 @@ void encoder_add_frame(encoder *enc, void *image_data, int delay)
 EMSCRIPTEN_KEEPALIVE
 void encoder_encode(encoder *enc)
 {
-  Gif_CompressInfo info;
-  Gif_InitCompressInfo(&info);
-  info.loss = 20;
-
-  FILE *file = fopen("/output.gif", "wb");
-  Gif_FullWriteFile(enc->stream, &info, file);
-  fclose(file);
-
+  Gif_IncrementalWriteComplete(enc->writer, enc->stream);
+  fclose(enc->file);
   Gif_DeleteStream(enc->stream);
   liq_attr_destroy(enc->attr);
   free(enc);
