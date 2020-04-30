@@ -1,5 +1,7 @@
 class GifEncoder {
 
+  static ID = 0;
+
   constructor(opts) {
     this.opts = opts;
     this.listeners = new Map();
@@ -17,7 +19,7 @@ class GifEncoder {
       return;
     }
 
-    this.worker = new Worker('/encoder/encoder.worker.js');
+    this.worker = new Worker('/encoder/worker.js');
 
     this.worker.addEventListener('message', msg => {
       switch (msg.data.type) {
