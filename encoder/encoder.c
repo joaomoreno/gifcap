@@ -81,7 +81,7 @@ void encoder_add_frame(encoder *enc, void *image_data, int delay)
 
   Gif_CreateUncompressedImage(image, 0);
   liq_write_remapped_image(res, raw_image, image->image_data, enc->width * enc->height); // HEAVY
-  Gif_CompressImage(enc->stream, image);
+  Gif_FullCompressImage(enc->stream, image, enc->compress_info);
   Gif_ReleaseUncompressedImage(image);
   Gif_IncrementalWriteImage(enc->writer, enc->stream, image);
 
