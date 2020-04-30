@@ -15,5 +15,6 @@
   "git.ignoredRepositories": [
     "encoder/vendor/gifsicle",
     "encoder/vendor/libimagequant"
-  ]
+  ],
+  "task.autoDetect": "off"
 }
