@@ -6,6 +6,12 @@
 #include <emscripten.h>
 #include <string.h>
 
+// #include <time.h>
+// clock_t c;
+// #define TIMESTAMP(name)                                                       \
+//   printf("  %s %f\n", name, ((double)(clock() - c) / CLOCKS_PER_SEC * 1000)); \
+//   c = clock();
+
 typedef struct encoder
 {
   liq_attr *attr;
@@ -59,10 +65,6 @@ inline Gif_Colormap *create_colormap_from_palette(const liq_palette *palette)
 
   return colormap;
 }
-
-// #define TIMESTAMP(name)                                                       \
-//   printf("  %s %f\n", name, ((double)(clock() - c) / CLOCKS_PER_SEC * 1000)); \
-//   c = clock();
 
 EMSCRIPTEN_KEEPALIVE
 void encoder_add_frame(encoder *enc, void *image_data, int delay)
