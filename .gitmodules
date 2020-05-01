@@ -3,4 +3,4 @@
 	url = https://github.com/ImageOptim/libimagequant.git
 [submodule "encoder/vendor/gifsicle"]
 	path = encoder/vendor/gifsicle
-	url = https://github.com/kohler/gifsicle.git
+	url = https://github.com/joaomoreno/gifsicle.git
