@@ -1,40 +1,39 @@
 importScripts('/encoder/encoder.js');
 
-let msg = undefined;
 let initialized = false;
+let opts;
+let totalFrames = 0;
+const frames = [];
 
-function main() {
-  if (!msg || !initialized) {
-    return;
+function process() {
+  let frame;
+
+  while (initialized && (frame = frames.pop())) {
+    const id = totalFrames++;
+    const ptr = Module._malloc(frame.buffer.byteLength);
+    const input = new Uint8Array(Module.HEAPU8.buffer, ptr, frame.buffer.byteLength);
+    input.set(new Uint8Array(frame.buffer));
+
+    const cb = addFunctionWasm((ptr, len) => {
+      const result = new Uint8Array(len);
+      result.set(new Uint8Array(Module.HEAPU8.buffer, ptr, len));
+      self.postMessage(result.buffer, { transfer: [result.buffer] });
+    }, 'vii');
+
+    Module['_encoder_new_frame'](id, opts.width, opts.height, ptr, frame.delay / 10, cb);
   }
-
-  const length = msg.data.width * msg.data.height * 4;
-  const encoder = Module['_encoder_new'](msg.data.width, msg.data.height);
-
-  for (let i = 0; i < msg.data.frames.length; i++) {
-    const frame = msg.data.frames[i];
-    const ptr = Module._malloc(length);
-    const buffer = new Uint8Array(Module.HEAPU8.buffer, ptr, length);
-    buffer.set(new Uint8Array(frame.imageData));
-    Module['_encoder_add_frame'](encoder, ptr, frame.delay / 10);
-    Module._free(ptr);
-    self.postMessage({ type: 'progress', progress: i / msg.data.frames.length });
-  }
-
-  Module['_encoder_encode'](encoder);
-
-  const result = FS.readFile('/output.gif');
-  const blob = new Blob([result], { type: 'image/gif' });
-
-  self.postMessage({ type: 'finished', blob });
 }
 
-self.onmessage = _msg => {
-  msg = _msg;
-  main();
+self.onmessage = msg => {
+  opts = msg.data;
+
+  self.onmessage = msg => {
+    frames.push(msg.data);
+    process();
+  };
 };
 
 Module['onRuntimeInitialized'] = () => {
   initialized = true;
-  main();
+  process();
 };

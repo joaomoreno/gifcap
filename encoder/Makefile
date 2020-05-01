@@ -1,6 +1,8 @@
 CC=emcc
 CFLAGS=-O2 \
 	-s ALLOW_MEMORY_GROWTH=1 \
+	-s RESERVED_FUNCTION_POINTERS=20 \
+	-s ALLOW_TABLE_GROWTH=1 \
 	-Ivendor/libimagequant \
 	-Ivendor/gifsicle/src \
 	-Ivendor/gifsicle/include

@@ -25,6 +25,10 @@ function main() {
 
   const startGifsicle = Date.now();
 
+  encoder.on('progress', progress => {
+    console.log('progress', progress);
+  });
+
   encoder.once('finished', blob => {
     const stats = document.getElementById('stats');
     stats.innerHTML += `<p>gifsicle: ${Date.now() - startGifsicle}ms, ${blob.size} bytes</p>`;
@@ -32,6 +36,8 @@ function main() {
     const url = URL.createObjectURL(blob);
     const gifsicle = document.getElementById('gifsicle');
     gifsicle.src = url;
+    const link = document.getElementById('gifsicle-link');
+    link.href = url;
   });
 
   encoder.render();
