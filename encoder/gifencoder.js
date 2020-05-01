@@ -1,7 +1,5 @@
 class GifEncoder {
 
-  static ID = 0;
-
   constructor(opts) {
     this.opts = opts;
     this.listeners = new Map();
