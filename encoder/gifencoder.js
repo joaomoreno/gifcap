@@ -52,6 +52,9 @@ class GifEncoder {
         'GIF89a',
         new Uint16Array([this.opts.width, this.opts.height]),
         new Uint8Array([0x70, 255, 0]),
+        new Uint8Array([0x21, 0xff, 0x0b]),
+        'NETSCAPE2.0',
+        new Uint8Array([0x03, 0x01, 0, 0, 0]),
         ...this.frames.map(f => f.buffer),
         ';'
       ];
