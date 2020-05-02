@@ -11,7 +11,9 @@
     "limits": "c",
     "random": "c",
     "clp.h": "c",
-    "kcolor.h": "c"
+    "kcolor.h": "c",
+    "*.tcc": "c",
+    "optional": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [
