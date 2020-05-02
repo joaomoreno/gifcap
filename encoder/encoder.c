@@ -17,10 +17,7 @@ int nested_mode = 0;
 Clp_Parser *clp = 0;
 Gif_CompressInfo gif_write_info = {.flags = 0, .loss = 80};
 
-typedef struct Encoder
-{
-  Gif_Stream *stream;
-} Encoder;
+typedef Gif_Stream Encoder;
 
 inline Gif_Colormap *create_colormap_from_palette(const liq_palette *palette)
 {
@@ -65,11 +62,7 @@ Encoder *encoder_new(int width, int height)
   stream->screen_width = width;
   stream->screen_height = height;
   stream->loopcount = 0;
-
-  Encoder *result = malloc(sizeof(Encoder));
-  result->stream = stream;
-
-  return result;
+  return stream;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -88,18 +81,17 @@ void encoder_add_frame(Encoder *encoder, int top, int left, int width, int heigh
   image->local = create_colormap_from_palette(palette);
   Gif_SetUncompressedImage(image, img, 0, 0);
 
-  Gif_AddImage(encoder->stream, image);
+  Gif_AddImage(encoder, image);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void encoder_finish(Encoder *encoder, void (*cb)(void *, int))
 {
   Gif_Writer *writer = Gif_NewMemoryWriter(&gif_write_info);
-  Gif_WriteGif(writer, encoder->stream);
+  Gif_WriteGif(writer, encoder);
 
   cb(writer->v, writer->pos);
 
   Gif_DeleteMemoryWriter(writer);
-  Gif_DeleteStream(encoder->stream);
-  free(encoder);
+  Gif_DeleteStream(encoder);
 }
