@@ -11,12 +11,21 @@
       "options": {
         "cwd": "${workspaceFolder}/encoder"
       },
-      "command": "source ~/Code/emsdk/emsdk_env.sh && make"
+      "command": "source ~/Code/emsdk/emsdk_env.sh && make",
+      "presentation": {
+        "clear": true,
+        "reveal": "silent"
+      }
     },
     {
       "label": "HTTP Server",
       "type": "shell",
       "command": "npx http-server",
+      "isBackground": true,
+      "presentation": {
+        "clear": true,
+        "reveal": "silent"
+      },
       "problemMatcher": []
     }
   ]

@@ -8,11 +8,17 @@
     "gif.h": "c",
     "emscripten.h": "c",
     "ios": "c",
-    "limits": "c"
+    "limits": "c",
+    "random": "c",
+    "clp.h": "c",
+    "kcolor.h": "c",
+    "*.tcc": "c",
+    "optional": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [
     "encoder/vendor/gifsicle",
     "encoder/vendor/libimagequant"
-  ]
+  ],
+  "task.autoDetect": "off"
 }
