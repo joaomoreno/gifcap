@@ -1,14 +1,44 @@
-function bufferEquals(a, b) {
+// IDEA: could we speed this up with WASM?
+function computeDiff(a, b, width) {
   const ua = new Uint32Array(a);
   const ub = new Uint32Array(b);
 
+  let top = undefined;
+  let bottom = undefined;
+  let left = width + 1;
+  let right = -1;
+
   for (let i = 0; i < ua.length; i++) {
     if ((ua[i] !== ub[i])) {
-      return false;
+      const y = Math.floor(i / width);
+      const x = i % width;
+
+      if (top === undefined) top = y;
+      bottom = y;
+      left = Math.min(left, x);
+      right = Math.max(right, x);
     }
   }
 
-  return true;
+  if (top !== undefined) {
+    return { top, left, width: right - left + 1, height: bottom - top + 1 };
+  }
+
+  return undefined;
+}
+
+function cropBuffer(_from, box, width) {
+  const result = new ArrayBuffer(4 * box.width * box.height);
+  const arr = new Uint32Array(result);
+  const from = new Uint32Array(_from);
+
+  for (let y = 0; y < box.height; y++) {
+    for (let x = 0; x < box.width; x++) {
+      arr[x + y * box.width] = from[box.left + x + (box.top + y) * width];
+    }
+  }
+
+  return result;
 }
 
 class GifEncoder {
@@ -17,6 +47,7 @@ class GifEncoder {
     this.opts = opts;
     this.listeners = new Map();
 
+    this.previousBuffer = undefined;
     this.frames = [];
     this.quantizers = [];
     this.framesSentToQuantize = 0;
@@ -35,8 +66,6 @@ class GifEncoder {
     const numberOfWorkers = Math.floor(navigator.hardwareConcurrency * 0.8);
     for (let i = 0; i < numberOfWorkers; i++) {
       const worker = new Worker('/encoder/quantizer.js');
-      worker.postMessage(opts);
-
       const onMessage = msg => this._onQuantizerMessage(i, msg);
       worker.addEventListener('message', onMessage);
       const dispose = () => worker.removeEventListener('message', onMessage);
@@ -49,15 +78,22 @@ class GifEncoder {
       return;
     }
 
-    const previousFrame = this.frames[this.frames.length - 1];
     const buffer = imageData.data.buffer;
 
-    if (previousFrame && bufferEquals(buffer, previousFrame.buffer)) {
-      previousFrame.delay += delay;
+    if (!this.previousBuffer) {
+      this.frames.push({ buffer, top: 0, left: 0, width: this.opts.width, height: this.opts.height, paletteLength: undefined, delay, quantized: false });
     } else {
-      this.frames.push({ buffer, paletteLength: undefined, delay, quantized: false });
+      const box = computeDiff(buffer, this.previousBuffer, this.opts.width);
+
+      if (!box) {
+        this.frames[this.frames.length - 1].delay += delay; // no changes, let's drop the frame
+      } else {
+        const crop = cropBuffer(buffer, box, this.opts.width);
+        this.frames.push({ buffer: crop, ...box, paletteLength: undefined, delay, quantized: false });
+      }
     }
 
+    this.previousBuffer = buffer;
     this._work();
   }
 
@@ -95,8 +131,8 @@ class GifEncoder {
 
     while ((this.totalFrames === undefined || this.framesSentToEncode < this.totalFrames) && this.frames[this.framesSentToEncode].quantized) {
       const frameIndex = this.framesSentToEncode++;
-      const { buffer, paletteLength, delay } = this.frames[frameIndex];
-      this.writer.postMessage({ buffer, paletteLength, delay }, { transfer: [buffer] });
+      const frame = this.frames[frameIndex];
+      this.writer.postMessage(frame, { transfer: [frame.buffer] });
       this.frames[frameIndex] = undefined; // gc
     }
 

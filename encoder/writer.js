@@ -16,15 +16,14 @@ function process() {
     encoder = Module['_encoder_new'](opts.width, opts.height);
   }
 
-  const imageLength = opts.width * opts.height;
-
   let frame;
   while (frame = frames.shift()) {
+    const imageLength = frame.width * frame.height;
     const ptr = Module._malloc(frame.paletteLength + imageLength);
     const input = new Uint8Array(Module.HEAPU8.buffer, ptr, frame.paletteLength + imageLength);
     input.set(new Uint8Array(frame.buffer));
 
-    Module['_encoder_add_frame'](encoder, ptr, frame.delay / 10);
+    Module['_encoder_add_frame'](encoder, frame.top, frame.left, frame.width, frame.height, ptr, frame.delay / 10);
     ptrs.push(ptr);
   }
 }

@@ -19,8 +19,6 @@ Gif_CompressInfo gif_write_info = {.flags = 0, .loss = 80};
 
 typedef struct Encoder
 {
-  int width;
-  int height;
   Gif_Stream *stream;
 } Encoder;
 
@@ -69,23 +67,24 @@ Encoder *encoder_new(int width, int height)
   stream->loopcount = 0;
 
   Encoder *result = malloc(sizeof(Encoder));
-  result->width = width;
-  result->height = height;
   result->stream = stream;
 
   return result;
 }
 
 EMSCRIPTEN_KEEPALIVE
-void encoder_add_frame(Encoder *encoder, void *data, int delay)
+void encoder_add_frame(Encoder *encoder, int top, int left, int width, int height, void *data, int delay)
 {
   liq_palette *palette = data;
   unsigned char *img = data + sizeof(liq_palette);
 
   Gif_Image *image = Gif_NewImage();
-  image->width = encoder->width;
-  image->height = encoder->height;
+  image->top = top;
+  image->left = left;
+  image->width = width;
+  image->height = height;
   image->delay = delay;
+  image->disposal = GIF_DISPOSAL_NONE;
   image->local = create_colormap_from_palette(palette);
   Gif_SetUncompressedImage(image, img, 0, 0);
 
@@ -95,8 +94,6 @@ void encoder_add_frame(Encoder *encoder, void *data, int delay)
 EMSCRIPTEN_KEEPALIVE
 void encoder_finish(Encoder *encoder, void (*cb)(void *, int))
 {
-  optimize_fragments(encoder->stream, 1, 0);
-
   Gif_Writer *writer = Gif_NewMemoryWriter(&gif_write_info);
   Gif_WriteGif(writer, encoder->stream);
 
