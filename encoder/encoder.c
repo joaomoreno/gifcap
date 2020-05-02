@@ -11,6 +11,13 @@
 //   printf("  %s %f\n", name, ((double)(clock() - c) / CLOCKS_PER_SEC * 1000)); \
 //   c = clock();
 
+typedef struct Encoder
+{
+  int width;
+  int height;
+  Gif_Stream *stream;
+} Encoder;
+
 inline Gif_Colormap *create_colormap_from_palette(const liq_palette *palette)
 {
   Gif_Colormap *colormap = Gif_NewFullColormap(palette->count, palette->count);
@@ -29,39 +36,73 @@ inline Gif_Colormap *create_colormap_from_palette(const liq_palette *palette)
 }
 
 EMSCRIPTEN_KEEPALIVE
-void encoder_new_frame(int id, int width, int height, void *image_data, int delay, void (*cb)(void *, int))
+void quantize_image(int width, int height, void *rgba, void (*cb)(void *, int, void *))
 {
   liq_attr *attr = liq_attr_create();
-  liq_image *raw_image = liq_image_create_rgba(attr, image_data, width, height, 0);
+  liq_image *raw_image = liq_image_create_rgba(attr, rgba, width, height, 0);
   liq_result *res = liq_quantize_image(attr, raw_image);
   liq_attr_destroy(attr);
 
   const liq_palette *palette = liq_get_palette(res);
+  size_t size = width * height;
+  unsigned char *img = malloc(size);
+  liq_write_remapped_image(res, raw_image, img, size);
+
+  cb((void *)palette, sizeof(liq_palette), img);
+
+  liq_result_destroy(res);
+  liq_image_destroy(raw_image);
+}
+
+EMSCRIPTEN_KEEPALIVE
+Encoder *encoder_new(int width, int height)
+{
   Gif_Stream *stream = Gif_NewStream();
   stream->screen_width = width;
   stream->screen_height = height;
   stream->loopcount = 0;
 
+  Encoder *result = malloc(sizeof(Encoder));
+  result->width = width;
+  result->height = height;
+  result->stream = stream;
+
+  return result;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void encoder_add_frame(Encoder *encoder, void *data, int delay)
+{
+  liq_palette *palette = data;
+  unsigned char *img = data + sizeof(liq_palette);
+
   Gif_Image *image = Gif_NewImage();
-  image->width = width;
-  image->height = height;
+  image->width = encoder->width;
+  image->height = encoder->height;
   image->delay = delay;
   image->local = create_colormap_from_palette(palette);
-  Gif_CreateUncompressedImage(image, 0);
-  liq_write_remapped_image(res, raw_image, image->image_data, width * height);
-  liq_result_destroy(res);
-  liq_image_destroy(raw_image);
+  Gif_SetUncompressedImage(image, img, 0, 0);
+
+  // TODO: remove, because of optimizing
+  Gif_CompressInfo compress_info = {.flags = 0, .loss = 20};
+  Gif_FullCompressImage(encoder->stream, image, &compress_info);
+
+  Gif_AddImage(encoder->stream, image);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void encoder_finish(Encoder *encoder, void (*cb)(void *, int))
+{
+  // TODO: optimize stream stream
 
   Gif_CompressInfo compress_info = {.flags = 0, .loss = 20};
-  Gif_FullCompressImage(stream, image, &compress_info);
-  Gif_ReleaseUncompressedImage(image);
 
   Gif_Writer *writer = Gif_NewMemoryWriter(&compress_info);
-  Gif_IncrementalWriteImage(writer, stream, image);
+  Gif_WriteGif(writer, encoder->stream);
 
   cb(writer->v, writer->pos);
 
   Gif_DeleteMemoryWriter(writer);
-  Gif_DeleteImage(image);
-  Gif_DeleteStream(stream);
+  Gif_DeleteStream(encoder->stream);
+  free(encoder);
 }

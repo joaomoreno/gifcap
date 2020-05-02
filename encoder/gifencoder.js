@@ -5,86 +5,96 @@ class GifEncoder {
     this.listeners = new Map();
 
     this.frames = [];
-    this.workers = [];
-    this.framesSent = 0;
-    this.framesReceived = 0;
+    this.quantizers = [];
+    this.framesSentToQuantize = 0;
+    this.framesQuantized = 0;
+    this.framesSentToEncode = 0;
     this.totalFrames = undefined;
-    this.busyWorkers = 0;
+    this.busyQuantizers = 0;
 
-    for (let i = 0; i < navigator.hardwareConcurrency; i++) {
-      const worker = new Worker('/encoder/worker.js');
+    this.writer = new Worker('/encoder/writer.js');
+    this.writer.postMessage(opts);
+
+    const onMessage = msg => this._onWriterMessage(msg);
+    this.writer.addEventListener('message', onMessage);
+    this.disposeWriter = () => this.writer.removeEventListener('message', onMessage);
+
+    const numberOfWorkers = Math.floor(navigator.hardwareConcurrency * 0.8);
+    for (let i = 0; i < numberOfWorkers; i++) {
+      const worker = new Worker('/encoder/quantizer.js');
       worker.postMessage(opts);
 
-      const onMessage = msg => this._onWorkerMessage(i, msg);
+      const onMessage = msg => this._onQuantizerMessage(i, msg);
       worker.addEventListener('message', onMessage);
       const dispose = () => worker.removeEventListener('message', onMessage);
-      this.workers.push({ worker, busy: false, frameIndex: undefined, dispose });
+      this.quantizers.push({ worker, busy: false, frameIndex: undefined, dispose });
     }
   }
 
   addFrame(imageData, delay) {
-    if (!this.workers || this.totalFrames !== undefined) {
+    if (!this.quantizers || this.totalFrames !== undefined) {
       return;
     }
 
-    this.frames.push({ buffer: imageData.data.buffer, delay });
+    this.frames.push({ buffer: imageData.data.buffer, paletteLength: undefined, delay, quantized: false });
     this._work();
   }
 
   _work() {
-    if (!this.workers) {
+    if (!this.quantizers) {
       return;
     }
 
-    while (this.framesSent < this.frames.length && this.busyWorkers < this.workers.length) {
-      const frameIndex = this.framesSent++;
+    while (this.framesSentToQuantize < this.frames.length && this.busyQuantizers < this.quantizers.length) {
+      const frameIndex = this.framesSentToQuantize++;
       const frame = this.frames[frameIndex];
-      const worker = this.workers[this.workers.findIndex(x => !x.busy)];
+      const worker = this.quantizers[this.quantizers.findIndex(x => !x.busy)];
 
       worker.busy = true;
       worker.frameIndex = frameIndex;
       worker.worker.postMessage(frame, { transfer: [frame.buffer] });
-      this.busyWorkers++;
-    }
-
-    if (this.framesReceived === this.totalFrames) {
-      const content = [
-        'GIF89a',
-        new Uint16Array([this.opts.width, this.opts.height]),
-        new Uint8Array([0x70, 255, 0]),
-        new Uint8Array([0x21, 0xff, 0x0b]),
-        'NETSCAPE2.0',
-        new Uint8Array([0x03, 0x01, 0, 0, 0]),
-        ...this.frames.map(f => f.buffer),
-        ';'
-      ];
-
-      const blob = new Blob(content, { type: 'image/gif' });
-      this._emit('finished', blob);
-      this.dispose();
+      this.busyQuantizers++;
     }
   }
 
-  _onWorkerMessage(workerIndex, msg) {
-    if (!this.workers) {
+  _onQuantizerMessage(workerIndex, msg) {
+    if (!this.quantizers) {
       return;
     }
 
-    const worker = this.workers[workerIndex];
-    const frame = this.frames[worker.frameIndex];
-
-    frame.buffer = msg.data;
-
+    const worker = this.quantizers[workerIndex];
     worker.busy = false;
-    worker.frameIndex = undefined;
-    this.busyWorkers--;
-    this.framesReceived++;
-    this._emit('progress', this.framesReceived / this.totalFrames);
+    this.busyQuantizers--;
+    this.framesQuantized++;
+
+    const frame = this.frames[worker.frameIndex];
+    frame.buffer = msg.data.buffer;
+    frame.paletteLength = msg.data.paletteLength;
+    frame.quantized = true;
+
+    while ((this.totalFrames === undefined || this.framesSentToEncode < this.totalFrames) && this.frames[this.framesSentToEncode].quantized) {
+      const frameIndex = this.framesSentToEncode++;
+      const { buffer, paletteLength, delay } = this.frames[frameIndex];
+      this.writer.postMessage({ buffer, paletteLength, delay }, { transfer: [buffer] });
+      this.frames[frameIndex] = undefined; // gc
+    }
+
+    if (this.framesSentToEncode === this.totalFrames) {
+      this.writer.postMessage('finish', { transfer: [] });
+    }
+
+    this._emit('progress', this.framesSentToEncode / this.totalFrames);
     this._work();
   }
 
+  _onWriterMessage(msg) {
+    const blob = new Blob([msg.data], { type: 'image/gif' });
+    this._emit('finished', blob);
+    this.dispose();
+  }
+
   render() {
-    if (!this.workers) {
+    if (!this.quantizers) {
       return;
     }
 
@@ -97,16 +107,19 @@ class GifEncoder {
   }
 
   dispose() {
-    if (!this.workers) {
+    if (!this.quantizers) {
       return;
     }
 
-    for (const { worker, dispose } of this.workers) {
+    this.writer.terminate();
+    this.disposeWriter();
+
+    for (const { worker, dispose } of this.quantizers) {
       worker.terminate();
       dispose();
     }
 
-    this.workers = undefined;
+    this.quantizers = undefined;
     this.frames = undefined;
   }
 
