@@ -1,3 +1,16 @@
+function bufferEquals(a, b) {
+  const ua = new Uint32Array(a);
+  const ub = new Uint32Array(b);
+
+  for (let i = 0; i < ua.length; i++) {
+    if ((ua[i] !== ub[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 class GifEncoder {
 
   constructor(opts) {
@@ -36,7 +49,15 @@ class GifEncoder {
       return;
     }
 
-    this.frames.push({ buffer: imageData.data.buffer, paletteLength: undefined, delay, quantized: false });
+    const previousFrame = this.frames[this.frames.length - 1];
+    const buffer = imageData.data.buffer;
+
+    if (previousFrame && bufferEquals(buffer, previousFrame.buffer)) {
+      previousFrame.delay += delay;
+    } else {
+      this.frames.push({ buffer, paletteLength: undefined, delay, quantized: false });
+    }
+
     this._work();
   }
 
@@ -45,7 +66,7 @@ class GifEncoder {
       return;
     }
 
-    while (this.framesSentToQuantize < this.frames.length && this.busyQuantizers < this.quantizers.length) {
+    while (this.framesSentToQuantize < (this.totalFrames === undefined ? this.frames.length - 1 : this.totalFrames) && this.busyQuantizers < this.quantizers.length) {
       const frameIndex = this.framesSentToQuantize++;
       const frame = this.frames[frameIndex];
       const worker = this.quantizers[this.quantizers.findIndex(x => !x.busy)];
