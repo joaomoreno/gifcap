@@ -58,8 +58,8 @@ function benchmarkGifjs(imageData) {
 }
 
 async function benchmark(imageData1, imageData2) {
-  // log('gifjs: rendering...');
-  // await benchmarkGifjs(imageData1);
+  log('gifjs: rendering...');
+  await benchmarkGifjs(imageData1);
   log('gifsicle: rendering...');
   await benchmarkGifsicle(imageData2);
 }
