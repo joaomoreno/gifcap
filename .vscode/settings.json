@@ -9,7 +9,9 @@
     "emscripten.h": "c",
     "ios": "c",
     "limits": "c",
-    "random": "c"
+    "random": "c",
+    "clp.h": "c",
+    "kcolor.h": "c"
   },
   "git.detectSubmodules": false,
   "git.ignoredRepositories": [
