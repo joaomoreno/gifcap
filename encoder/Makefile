@@ -11,7 +11,9 @@ LIBS=vendor/libimagequant/*.o \
 	vendor/gifsicle/src/fmalloc.o \
 	vendor/gifsicle/src/support.o \
 	vendor/gifsicle/src/gifwrite.o \
-	vendor/gifsicle/src/gifread.o
+	vendor/gifsicle/src/gifread.o \
+	vendor/gifsicle/src/quantize.o \
+	vendor/gifsicle/src/optimize.o
 
 encoder.js: encoder.c vendor/libimagequant/libimagequant.o vendor/gifsicle/gifsicle.o
 	$(CC) $(CFLAGS) -o $@ encoder.c $(LIBS)

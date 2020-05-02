@@ -11,6 +11,12 @@
 //   printf("  %s %f\n", name, ((double)(clock() - c) / CLOCKS_PER_SEC * 1000)); \
 //   c = clock();
 
+Gt_OutputData active_output_data;
+int mode = 0;
+int nested_mode = 0;
+Clp_Parser *clp = 0;
+Gif_CompressInfo gif_write_info = {.flags = 0, .loss = 20};
+
 typedef struct Encoder
 {
   int width;
@@ -83,21 +89,15 @@ void encoder_add_frame(Encoder *encoder, void *data, int delay)
   image->local = create_colormap_from_palette(palette);
   Gif_SetUncompressedImage(image, img, 0, 0);
 
-  // TODO: remove, because of optimizing
-  Gif_CompressInfo compress_info = {.flags = 0, .loss = 20};
-  Gif_FullCompressImage(encoder->stream, image, &compress_info);
-
   Gif_AddImage(encoder->stream, image);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void encoder_finish(Encoder *encoder, void (*cb)(void *, int))
 {
-  // TODO: optimize stream stream
+  optimize_fragments(encoder->stream, 1, 0);
 
-  Gif_CompressInfo compress_info = {.flags = 0, .loss = 20};
-
-  Gif_Writer *writer = Gif_NewMemoryWriter(&compress_info);
+  Gif_Writer *writer = Gif_NewMemoryWriter(&gif_write_info);
   Gif_WriteGif(writer, encoder->stream);
 
   cb(writer->v, writer->pos);
