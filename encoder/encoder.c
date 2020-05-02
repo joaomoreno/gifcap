@@ -15,7 +15,7 @@ Gt_OutputData active_output_data;
 int mode = 0;
 int nested_mode = 0;
 Clp_Parser *clp = 0;
-Gif_CompressInfo gif_write_info = {.flags = 0, .loss = 20};
+Gif_CompressInfo gif_write_info = {.flags = 0, .loss = 80};
 
 typedef struct Encoder
 {
