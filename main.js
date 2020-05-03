@@ -147,7 +147,7 @@ class RecordView {
         return;
       }
 
-      const first = typeof this.startTime === 'undefined';
+      const first = this.startTime === undefined;
 
       if (first) {
         const width = video.videoWidth;
@@ -169,7 +169,7 @@ class RecordView {
       });
     };
 
-    const redrawInterval = setInterval(() => m.redraw(), 1000);
+    const redrawInterval = setInterval(() => m.redraw(), 100);
 
     const track = this.recording.captureStream.getVideoTracks()[0];
     const endedListener = () => {
@@ -197,7 +197,7 @@ class RecordView {
 
     return [
       m(View, { actions }, [
-        m(Timer, { duration: typeof this.startTime === 'number' ? Date.now() - this.startTime : 0 }),
+        m(Timer, { duration: this.startTime === undefined ? 0 : Date.now() - this.startTime }),
         m('canvas.hidden', { width: 640, height: 480 }),
         m('video.hidden', { autoplay: true, playsinline: true }),
       ]),
@@ -383,7 +383,7 @@ class PreviewView {
     const offsetLeft = event.currentTarget.offsetLeft;
     const mouseTop = event => Math.max(0, Math.min(this.recording.height, (event.clientY - offsetTop - top) / this.viewport.zoom));
     const mouseLeft = event => Math.max(0, Math.min(this.recording.width, (event.clientX - offsetLeft - left) / this.viewport.zoom));
-    const point = event => ({ top: mouseTop(event), left: mouseLeft(event) });
+    const point = event => ({ top: Math.round(mouseTop(event)), left: Math.round(mouseLeft(event)) });
     const from = point(event);
 
     let didMove = false;
@@ -541,23 +541,26 @@ class RenderView {
     const start = getFrameIndex(this.recording.frames, this.trim.start);
     const end = getFrameIndex(this.recording.frames, this.trim.end);
 
-    for (let i = start; i <= end; i++) {
-      let { imageData, timestamp } = this.recording.frames[i];
+    const processFrame = index => {
+      if (index > end) {
+        this.onbeforeremove = () => gif.abort();
+        gif.render();
+        return;
+      }
+
+      let { imageData, timestamp } = this.recording.frames[index];
 
       if (isCropped) {
         ctx.putImageData(imageData, 0, 0);
         imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
       }
 
-      const delay = i < end ? this.recording.frames[i + 1].timestamp - timestamp : 100;
+      const delay = index < end ? this.recording.frames[index + 1].timestamp - timestamp : 100;
       gif.addFrame(imageData, delay);
-    }
-
-    this.onbeforeremove = () => {
-      gif.abort();
+      setTimeout(() => processFrame(index + 1), 0);
     };
 
-    gif.render();
+    processFrame(start);
   }
 
   view() {
@@ -584,6 +587,31 @@ class App {
   }
 
   view() {
+    return m('section', { id: 'app', class: this.state === 'idle' && !this.recording ? 'home' : '' }, [
+      m('header', { id: 'app-header' }, [
+        m('h1', [
+          m('span', { class: 'gif' }, 'gif'),
+          m('span', { class: 'cap' }, 'cap'),
+        ])
+      ]),
+      m('section', { id: 'app-body' }, [this.body()]),
+      m('footer', { id: 'app-footer' }, [
+        m('span', [
+          m('a', { href: 'https://github.com/joaomoreno/gifcap' }),
+          m('img', { alt: 'GitHub', src: 'https://icongr.am/octicons/mark-github.svg?size=18&color=9e9e9e' }),
+          ' joaomoreno/gifcap'
+        ]),
+        m('span', [
+          'Made with ',
+          m('img', { alt: 'love', src: 'https://icongr.am/octicons/heart.svg?size=18&color=9e9e9e' }),
+          ' by ',
+          m('a', { href: 'https://github.com/joaomoreno' }, ['João Moreno']),
+        ])
+      ])
+    ]);
+  }
+
+  body() {
     switch (this.state) {
       case 'idle': return m(IdleView, { app: this });
       case 'recording': return m(RecordView, { app: this });
