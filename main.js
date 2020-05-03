@@ -383,7 +383,7 @@ class PreviewView {
     const offsetLeft = event.currentTarget.offsetLeft;
     const mouseTop = event => Math.max(0, Math.min(this.recording.height, (event.clientY - offsetTop - top) / this.viewport.zoom));
     const mouseLeft = event => Math.max(0, Math.min(this.recording.width, (event.clientX - offsetLeft - left) / this.viewport.zoom));
-    const point = event => ({ top: mouseTop(event), left: mouseLeft(event) });
+    const point = event => ({ top: Math.round(mouseTop(event)), left: Math.round(mouseLeft(event)) });
     const from = point(event);
 
     let didMove = false;
