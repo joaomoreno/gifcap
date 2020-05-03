@@ -140,7 +140,10 @@ class GifEncoder {
       this.writer.postMessage('finish', { transfer: [] });
     }
 
-    this._emit('progress', this.framesSentToEncode / this.totalFrames);
+    if (this.totalFrames !== undefined) {
+      this._emit('progress', this.framesQuantized / this.totalFrames);
+    }
+
     this._work();
   }
 
