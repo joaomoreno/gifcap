@@ -3,7 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}/encoder/vendor/libimagequant",
+                "${workspaceFolder}/encoder/vendor/gifsicle/include",
+                "${workspaceFolder}/encoder/vendor/gifsicle/src",
                 "~/Code/emsdk/upstream/emscripten/system/include"
             ],
             "defines": [
