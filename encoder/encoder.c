@@ -79,8 +79,9 @@ void encoder_add_frame(Encoder *encoder, int top, int left, int width, int heigh
   image->delay = delay;
   image->disposal = GIF_DISPOSAL_NONE;
   image->local = create_colormap_from_palette(palette);
-  Gif_SetUncompressedImage(image, img, 0, 0);
 
+  Gif_SetUncompressedImage(image, img, 0, 0);
+  Gif_FullCompressImage(encoder, image, &gif_write_info);
   Gif_AddImage(encoder, image);
 }
 
