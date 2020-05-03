@@ -587,6 +587,31 @@ class App {
   }
 
   view() {
+    return m('section', { id: 'app' }, [
+      m('header', { id: 'app-header' }, [
+        m('h1', [
+          m('span', { class: 'gif' }, 'gif'),
+          m('span', { class: 'cap' }, 'cap'),
+        ])
+      ]),
+      m('section', { id: 'app-body' }, [this.body()]),
+      m('footer', { id: 'app-footer' }, [
+        m('span', [
+          m('a', { href: 'https://github.com/joaomoreno/gifcap' }),
+          m('img', { alt: 'GitHub', src: 'https://icongr.am/octicons/mark-github.svg?size=18&color=9e9e9e' }),
+          'joaomoreno/gifcap'
+        ]),
+        m('span', [
+          'Made with',
+          m('img', { alt: 'love', src: 'https://icongr.am/octicons/heart.svg?size=18&color=9e9e9e' }),
+          'by',
+          m('a', { href: 'https://github.com/joaomoreno' }, ['João Moreno']),
+        ])
+      ])
+    ]);
+  }
+
+  body() {
     switch (this.state) {
       case 'idle': return m(IdleView, { app: this });
       case 'recording': return m(RecordView, { app: this });

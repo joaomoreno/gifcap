@@ -13,14 +13,14 @@
   --font-family: 'Roboto', sans-serif;
 }
 
-html, body {
+html, body, #app-container, #app {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
 }
 
-body {
+#app {
   display: flex;
   flex-direction: column;
   color: #333;
@@ -100,7 +100,7 @@ h1 {
   justify-content: center;
 }
 
-#app-container {
+#app-body {
   flex: 1;
 }
 
