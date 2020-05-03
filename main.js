@@ -147,7 +147,7 @@ class RecordView {
         return;
       }
 
-      const first = typeof this.startTime === 'undefined';
+      const first = this.startTime === undefined;
 
       if (first) {
         const width = video.videoWidth;
@@ -169,7 +169,7 @@ class RecordView {
       });
     };
 
-    const redrawInterval = setInterval(() => m.redraw(), 1000);
+    const redrawInterval = setInterval(() => m.redraw(), 100);
 
     const track = this.recording.captureStream.getVideoTracks()[0];
     const endedListener = () => {
@@ -197,7 +197,7 @@ class RecordView {
 
     return [
       m(View, { actions }, [
-        m(Timer, { duration: typeof this.startTime === 'number' ? Date.now() - this.startTime : 0 }),
+        m(Timer, { duration: this.startTime === undefined ? 0 : Date.now() - this.startTime }),
         m('canvas.hidden', { width: 640, height: 480 }),
         m('video.hidden', { autoplay: true, playsinline: true }),
       ]),
