@@ -587,7 +587,7 @@ class App {
   }
 
   view() {
-    return m('section', { id: 'app' }, [
+    return m('section', { id: 'app', class: this.state === 'idle' && !this.recording ? 'home' : '' }, [
       m('header', { id: 'app-header' }, [
         m('h1', [
           m('span', { class: 'gif' }, 'gif'),
@@ -599,12 +599,12 @@ class App {
         m('span', [
           m('a', { href: 'https://github.com/joaomoreno/gifcap' }),
           m('img', { alt: 'GitHub', src: 'https://icongr.am/octicons/mark-github.svg?size=18&color=9e9e9e' }),
-          'joaomoreno/gifcap'
+          ' joaomoreno/gifcap'
         ]),
         m('span', [
-          'Made with',
+          'Made with ',
           m('img', { alt: 'love', src: 'https://icongr.am/octicons/heart.svg?size=18&color=9e9e9e' }),
-          'by',
+          ' by ',
           m('a', { href: 'https://github.com/joaomoreno' }, ['João Moreno']),
         ])
       ])

@@ -25,7 +25,6 @@ html, body, #app-container, #app {
   flex-direction: column;
   color: #333;
 }
-
 img {
   max-width: initial !important;
 }
@@ -44,11 +43,14 @@ img {
 #app-footer {
   display: flex;
   justify-content: space-between;
-  padding: 1em;
+  padding: 0.5em 1em;
   background: #333333;
   color: #c5c5c5;
   border-top: 1px solid #9e9e9e;
   font-size: 0.8em;
+  transition-property: padding;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
 }
 
 #app-footer a {
@@ -61,7 +63,11 @@ img {
 
 h1 {
   font-family: 'Baloo 2', cursive;
-  font-size: 5em;
+  font-size: 1.5em;
+  margin: 0.5em;
+  transition-property: font-size, margin;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
 }
 
 .gif {
@@ -230,4 +236,15 @@ input[type="range"] {
 
 .button.outline {
   border: none;
+}
+
+/* Home */
+
+#app.home > #app-header > h1 {
+  font-size: 5em;
+  margin: 0.2em;
+}
+
+#app.home > #app-footer {
+  padding: 1em;
 }
