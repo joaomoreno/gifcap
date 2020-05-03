@@ -82,6 +82,11 @@ void encoder_add_frame(Encoder *encoder, int top, int left, int width, int heigh
 
   Gif_SetUncompressedImage(image, img, 0, 0);
   Gif_FullCompressImage(encoder, image, &gif_write_info);
+
+  Gif_DeleteArray(image->img);
+  image->img = 0;
+  image->image_data = 0;
+
   Gif_AddImage(encoder, image);
 }
 
