@@ -3,7 +3,6 @@ importScripts('/encoder/encoder.js');
 let initialized = false;
 let opts;
 
-const ptrs = [];
 const frames = [];
 let encoder;
 
@@ -24,7 +23,7 @@ function process() {
     input.set(new Uint8Array(frame.buffer));
 
     Module['_encoder_add_frame'](encoder, frame.top, frame.left, frame.width, frame.height, ptr, frame.delay / 10);
-    ptrs.push(ptr);
+    Module._free(ptr);
   }
 }
 
@@ -41,11 +40,6 @@ function finish() {
 
   Module['_encoder_finish'](encoder, cb);
 
-  for (const ptr of ptrs) {
-    Module._free(ptr);
-  }
-
-  ptrs = undefined;
   encoder = undefined;
 }
 
