@@ -541,23 +541,26 @@ class RenderView {
     const start = getFrameIndex(this.recording.frames, this.trim.start);
     const end = getFrameIndex(this.recording.frames, this.trim.end);
 
-    for (let i = start; i <= end; i++) {
-      let { imageData, timestamp } = this.recording.frames[i];
+    const processFrame = index => {
+      if (index > end) {
+        this.onbeforeremove = () => gif.abort();
+        gif.render();
+        return;
+      }
+
+      let { imageData, timestamp } = this.recording.frames[index];
 
       if (isCropped) {
         ctx.putImageData(imageData, 0, 0);
         imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
       }
 
-      const delay = i < end ? this.recording.frames[i + 1].timestamp - timestamp : 100;
+      const delay = index < end ? this.recording.frames[index + 1].timestamp - timestamp : 100;
       gif.addFrame(imageData, delay);
-    }
-
-    this.onbeforeremove = () => {
-      gif.abort();
+      setTimeout(() => processFrame(index + 1), 0);
     };
 
-    gif.render();
+    processFrame(start);
   }
 
   view() {
