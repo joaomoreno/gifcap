@@ -597,9 +597,10 @@ class App {
       m('section', { id: 'app-body' }, [this.body()]),
       m('footer', { id: 'app-footer' }, [
         m('span', [
-          m('a', { href: 'https://github.com/joaomoreno/gifcap' }),
-          m('img', { alt: 'GitHub', src: 'https://icongr.am/octicons/mark-github.svg?size=18&color=9e9e9e' }),
-          ' joaomoreno/gifcap'
+          m('a', { href: 'https://github.com/joaomoreno/gifcap' }, [
+            m('img', { alt: 'GitHub', src: 'https://icongr.am/octicons/mark-github.svg?size=18&color=9e9e9e' }),
+            ' joaomoreno/gifcap'
+          ]),
         ]),
         m('span', [
           'Made with ',
