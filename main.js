@@ -596,13 +596,19 @@ class App {
       ]),
       m('section', { id: 'app-body' }, [this.body()]),
       m('footer', { id: 'app-footer' }, [
-        m('span', [
+        m('span.left', [
           m('a', { href: 'https://github.com/joaomoreno/gifcap' }, [
             m('img', { alt: 'GitHub', src: 'https://icongr.am/octicons/mark-github.svg?size=18&color=9e9e9e' }),
             ' joaomoreno/gifcap'
           ]),
         ]),
         m('span', [
+          m('a', { title: 'Thanks!', href: 'bitcoin:356S2FBHDwBUjki72KoForZ8YgYf4z3pFa?label=gifcap&message=Thanks%20for%20making%20gifcap!' }, [
+            m('img', { alt: 'GitHub', src: 'https://icongr.am/material/bitcoin.svg?size=18&color=9e9e9e' }),
+            ' 356S2FBHDwBUjki72KoForZ8YgYf4z3pFa'
+          ]),
+        ]),
+        m('span.right', [
           'Made with ',
           m('img', { alt: 'love', src: 'https://icongr.am/octicons/heart.svg?size=18&color=9e9e9e' }),
           ' by ',

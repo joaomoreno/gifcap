@@ -1,5 +1,3 @@
-@import url('https://unpkg.com/chota@0.7.1');
-
 :root {
   --color-primary: #AD2C2C;
   --color-lightGrey: #d2d6dd;
@@ -41,8 +39,7 @@ img {
 }
 
 #app-footer {
-  display: flex;
-  justify-content: space-between;
+  text-align: center;
   padding: 0.5em 1em;
   background: #333333;
   color: #c5c5c5;
@@ -51,6 +48,14 @@ img {
   transition-property: padding;
   transition-duration: 0.2s;
   transition-timing-function: ease-out;
+}
+
+.left {
+  float: left;
+}
+
+.right {
+  float: right;
 }
 
 #app-footer a {
