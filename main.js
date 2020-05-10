@@ -192,13 +192,12 @@ class RecordView {
   }
 
   view() {
-    const actions = [
-      m(Button, { label: 'Stop', icon: 'primitive-square', onclick: () => this.app.stopRecording() })
-    ];
-
     return [
-      m(View, { actions }, [
-        m(Timer, { duration: this.startTime === undefined ? 0 : Date.now() - this.startTime }),
+      m(View, [
+        m('p', [
+          m(Timer, { duration: this.startTime === undefined ? 0 : Date.now() - this.startTime }),
+        ]),
+        m(Button, { label: 'Stop Recording', icon: 'primitive-square', onclick: () => this.app.stopRecording() }),
         m('canvas.hidden', { width: 640, height: 480 }),
         m('video.hidden', { autoplay: true, playsinline: true }),
       ]),
