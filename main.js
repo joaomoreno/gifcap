@@ -587,13 +587,13 @@ class App {
 
   view() {
     return m('section', { id: 'app', class: this.state === 'idle' && !this.recording ? 'home' : '' }, [
-      m('header', { id: 'app-header' }, [
+      m('section', { id: 'app-body' }, [
         m('h1', [
           m('span', { class: 'gif' }, 'gif'),
           m('span', { class: 'cap' }, 'cap'),
-        ])
+        ]),
+        this.body()
       ]),
-      m('section', { id: 'app-body' }, [this.body()]),
       m('footer', { id: 'app-footer' }, [
         m('span.left', [
           m('a', { href: 'https://github.com/joaomoreno/gifcap' }, [
