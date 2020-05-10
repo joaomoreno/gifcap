@@ -4,8 +4,6 @@ Record your screen into an animated GIF, all you need is a browser!
 
 Try it now at [gifcap.dev](https://gifcap.dev/).
 
-[![screenshot](media/screenshot.png)](https://gifcap.dev/)
-
 **Features:**
 
 - No installations, no bloatware, no updates: this works in any modern browser, including Google Chrome, Firefox, Edge and Safari;
@@ -21,4 +19,4 @@ Try it now at [gifcap.dev](https://gifcap.dev/).
 
 **Wanna show your support?**
 
-I do love coffee ☕: [`356S2FBHDwBUjki72KoForZ8YgYf4z3pFa`](bitcoin:356S2FBHDwBUjki72KoForZ8YgYf4z3pFa?label=gifcap&message=Thanks%20for%20making%20gifcap!).
+I do love coffee ☕: `bitcoin:356S2FBHDwBUjki72KoForZ8YgYf4z3pFa`
