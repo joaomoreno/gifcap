@@ -92,17 +92,17 @@ class IdleView {
   view() {
     let content, actions;
 
-    if (this.app.recording) {
+    if (this.app.gif) {
       content = m('.recording-card', [
-        m('a', { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, [
-          m('img.recording', { src: this.app.recording.url })
+        m('a', { href: this.app.gif.url, download: 'recording.gif', target: '_blank' }, [
+          m('img.recording', { src: this.app.gif.url })
         ]),
         m('footer', [
-          m(Timer, { duration: this.app.recording.duration }),
+          m(Timer, { duration: this.app.gif.duration }),
           m('span.tag.is-small', [
-            m('a.recording-detail', { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, [
+            m('a.recording-detail', { href: this.app.gif.url, download: 'recording.gif', target: '_blank' }, [
               m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
-              humanSize(this.app.recording.size)
+              humanSize(this.app.gif.size)
             ])
           ]),
         ]),
@@ -110,7 +110,8 @@ class IdleView {
 
       actions = [
         m(Button, { label: 'Download', icon: 'cloud-download', a: { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, primary: true }),
-        m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() })
+        m(Button, { label: 'Edit', icon: 'pencil', onclick: () => this.app.editGif() }),
+        m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.discardGif() })
       ];
     } else {
       content = [
@@ -191,13 +192,12 @@ class RecordView {
   }
 
   view() {
-    const actions = [
-      m(Button, { label: 'Stop', icon: 'primitive-square', onclick: () => this.app.stopRecording() })
-    ];
-
     return [
-      m(View, { actions }, [
-        m(Timer, { duration: this.startTime === undefined ? 0 : Date.now() - this.startTime }),
+      m(View, [
+        m('p', [
+          m(Timer, { duration: this.startTime === undefined ? 0 : Date.now() - this.startTime }),
+        ]),
+        m(Button, { label: 'Stop Recording', icon: 'primitive-square', onclick: () => this.app.stopRecording() }),
         m('canvas.hidden', { width: 640, height: 480 }),
         m('video.hidden', { autoplay: true, playsinline: true }),
       ]),
@@ -285,8 +285,8 @@ class PreviewView {
           m('.trim-end', { onmousedown: e => this.onTrimMouseDown('end', e) }),
         ])
       ]),
-      m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.cancel() }),
       m(Button, { label: 'Render', icon: 'gear', onclick: () => this.app.startRendering({ trim: this.trim, crop: this.crop }), primary: true }),
+      m(Button, { title: 'Discard', icon: 'trashcan', onclick: () => this.app.discardGif() }),
     ];
 
     const scale = value => value * this.viewport.zoom;
@@ -516,7 +516,6 @@ class RenderView {
   }
 
   async oncreate(vnode) {
-    const isCropped = this.crop.top !== 0 || this.crop.left !== 0 || this.crop.width !== this.recording.width || this.crop.height !== this.recording.height;
     const gif = new GifEncoder({
       width: this.crop.width,
       height: this.crop.height,
@@ -537,7 +536,7 @@ class RenderView {
       m.redraw();
     });
 
-    const ctx = isCropped && vnode.dom.getElementsByTagName('canvas')[0].getContext('2d');
+    const ctx = vnode.dom.getElementsByTagName('canvas')[0].getContext('2d');
     const start = getFrameIndex(this.recording.frames, this.trim.start);
     const end = getFrameIndex(this.recording.frames, this.trim.end);
 
@@ -550,10 +549,11 @@ class RenderView {
 
       let { imageData, timestamp } = this.recording.frames[index];
 
-      if (isCropped) {
-        ctx.putImageData(imageData, 0, 0);
-        imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
-      }
+      // we always copy the imagedata, because the user might want to
+      // go back to edit, and we can't afford to lose frames which
+      // were moved to web workers
+      ctx.putImageData(imageData, 0, 0);
+      imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
 
       const delay = index < end ? this.recording.frames[index + 1].timestamp - timestamp : 100;
       gif.addFrame(imageData, delay);
@@ -564,15 +564,14 @@ class RenderView {
   }
 
   view() {
-    const isCropped = this.crop.top !== 0 || this.crop.left !== 0 || this.crop.width !== this.recording.width || this.crop.height !== this.recording.height;
     const actions = [
-      m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.app.cancel() })
+      m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.app.cancelRendering() })
     ];
 
     return [
       m(View, { actions }, [
         m('progress', { max: '1', value: this.progress, title: 'Rendering...' }, `Rendering: ${Math.floor(this.progress * 100)}%`),
-        isCropped && m('canvas.hidden', { width: this.recording.width, height: this.recording.height }),
+        m('canvas.hidden', { width: this.recording.width, height: this.recording.height }),
       ])
     ];
   }
@@ -588,13 +587,13 @@ class App {
 
   view() {
     return m('section', { id: 'app', class: this.state === 'idle' && !this.recording ? 'home' : '' }, [
-      m('header', { id: 'app-header' }, [
+      m('section', { id: 'app-body' }, [
         m('h1', [
           m('span', { class: 'gif' }, 'gif'),
           m('span', { class: 'cap' }, 'cap'),
-        ])
+        ]),
+        this.body()
       ]),
-      m('section', { id: 'app-body' }, [this.body()]),
       m('footer', { id: 'app-footer' }, [
         m('span.left', [
           m('a', { href: 'https://github.com/joaomoreno/gifcap' }, [
@@ -642,7 +641,7 @@ class App {
         height: undefined,
         frames: []
       };
-      m.redraw();
+      m.redraw.sync();
     } catch (err) {
       console.error(err);
       return;
@@ -660,14 +659,24 @@ class App {
 
   setRenderedRecording(recording) {
     this.state = 'idle';
-    this.recording = recording;
+    this.gif = recording;
     this.renderOptions = undefined;
   }
 
-  cancel() {
-    this.state = 'idle';
-    this.recording = undefined;
+  cancelRendering() {
+    this.state = 'preview';
     this.renderOptions = undefined;
+  }
+
+  editGif() {
+    this.state = 'preview';
+    this.gif = undefined;
+  }
+
+  discardGif() {
+    this.state = 'idle';
+    this.gif = undefined;
+    this.recording = undefined;
   }
 }
 
