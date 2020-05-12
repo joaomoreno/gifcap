@@ -641,7 +641,7 @@ class App {
         height: undefined,
         frames: []
       };
-      m.redraw();
+      m.redraw.sync();
     } catch (err) {
       console.error(err);
       return;
