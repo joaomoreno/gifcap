@@ -101,7 +101,7 @@ class IdleView {
           m(Timer, { duration: this.app.gif.duration }),
           m('span.tag.is-small', [
             m('a.recording-detail', { href: this.app.gif.url, download: 'recording.gif', target: '_blank' }, [
-              m('img', { src: 'https://icongr.am/octicons/cloud-download.svg?size=16&color=333333' }),
+              m('img', { src: 'https://icongr.am/octicons/download.svg?size=16&color=333333' }),
               humanSize(this.app.gif.size)
             ])
           ]),
@@ -109,7 +109,7 @@ class IdleView {
       ]);
 
       actions = [
-        m(Button, { label: 'Download', icon: 'cloud-download', a: { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, primary: true }),
+        m(Button, { label: 'Download', icon: 'download', a: { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, primary: true }),
         m(Button, { label: 'Edit', icon: 'pencil', onclick: () => this.app.editGif() }),
         m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.discardGif() })
       ];
@@ -197,7 +197,7 @@ class RecordView {
         m('p', [
           m(Timer, { duration: this.startTime === undefined ? 0 : Date.now() - this.startTime }),
         ]),
-        m(Button, { label: 'Stop Recording', icon: 'primitive-square', onclick: () => this.app.stopRecording() }),
+        m(Button, { label: 'Stop Recording', icon: 'square-fill', onclick: () => this.app.stopRecording() }),
         m('canvas.hidden', { width: 640, height: 480 }),
         m('video.hidden', { autoplay: true, playsinline: true }),
       ]),
@@ -565,7 +565,7 @@ class RenderView {
 
   view() {
     const actions = [
-      m(Button, { label: 'Cancel', icon: 'primitive-square', onclick: () => this.app.cancelRendering() })
+      m(Button, { label: 'Cancel', icon: 'square-fill', onclick: () => this.app.cancelRendering() })
     ];
 
     return [
