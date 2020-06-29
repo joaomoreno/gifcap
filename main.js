@@ -109,7 +109,7 @@ class IdleView {
       ]);
 
       actions = [
-        m(Button, { label: 'Download', icon: 'download', a: { href: this.app.recording.url, download: 'recording.gif', target: '_blank' }, primary: true }),
+        m(Button, { label: 'Download', icon: 'download', a: { href: this.app.gif.url, download: 'recording.gif', target: '_blank' }, primary: true }),
         m(Button, { label: 'Edit', icon: 'pencil', onclick: () => this.app.editGif() }),
         m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.discardGif() })
       ];
