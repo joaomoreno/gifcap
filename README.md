@@ -15,6 +15,8 @@ Try it now at [gifcap.dev](https://gifcap.dev/).
 - Intuitive trimming UI
 - Easy cropping via visual drag-and-drop
 
+
+  Note: For some application the screen capture does not work if opened with Administrative privilages. It will work if these apps are opened without Admin privilage. you can also "Entire Screen" option to get around this issue.
 ---
 
 **Wanna show your support?**
