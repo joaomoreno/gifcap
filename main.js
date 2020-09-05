@@ -321,6 +321,8 @@ class PreviewView {
   onTrimMouseDown(handle, event) {
     event.preventDefault();
 
+    this.pause();
+
     const ctx = this.canvas.getContext('2d');
     const start = {
       width: this.playbar.clientWidth,
@@ -332,8 +334,11 @@ class PreviewView {
 
     const onMouseMove = e => {
       const diff = e.screenX - start.screenX;
-      const head = start.head + Math.round(diff * this.recording.duration / start.width);
+      const head = this.playback.head = start.head + Math.round(diff * this.recording.duration / start.width);
       this.trim[handle] = Math.max(start.min, Math.min(start.max, head));
+
+      const index = getFrameIndex(this.recording.frames, head);
+      ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
 
       m.redraw();
     };
@@ -344,15 +349,6 @@ class PreviewView {
 
       this.playback.start = this.trim.start;
       this.playback.end = this.trim.end;
-
-      if (this.isPlaying) {
-        this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, this.playback.head));
-        this.playback.offset = Date.now() - this.playback.head + this.playback.start;
-
-        const index = getFrameIndex(this.recording.frames, this.playback.head);
-        ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
-      }
-
       m.redraw();
     };
 
