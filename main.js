@@ -632,7 +632,7 @@ class App {
     }
 
     try {
-      const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 9999, height: 9999 } });
 
       this.state = 'recording';
       this.recording = {
