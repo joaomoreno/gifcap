@@ -602,9 +602,9 @@ class App {
           ]),
         ]),
         m('span', [
-          m('a', { title: 'Feel free to buy me a cup of coffee with Bitcoin.', href: 'bitcoin:356S2FBHDwBUjki72KoForZ8YgYf4z3pFa?label=gifcap&message=Thanks%20for%20making%20gifcap!' }, [
+          m('a', { title: 'Sponsor me!', href: 'https://github.com/sponsors/joaomoreno' }, [
             m('img', { alt: 'GitHub', src: 'https://icongr.am/material/coffee.svg?size=18&color=9e9e9e' }),
-            ' 356S2FBHDwBUjki72KoForZ8YgYf4z3pFa'
+            ' Like the tool? Sponsor me!'
           ]),
         ]),
         m('span.right', [
