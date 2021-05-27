@@ -2,7 +2,9 @@
 
 Record your screen into an animated GIF, all you need is a browser!
 
-Try it now at [gifcap.dev](https://gifcap.dev/).
+👉 [gifcap.dev](https://gifcap.dev/)
+
+[![gifcap screenshot](https://user-images.githubusercontent.com/22350/119881198-4d861b00-bf2d-11eb-866b-9607b6da676a.png)](https://gifcap.dev/)
 
 **Features:**
 
@@ -14,9 +16,3 @@ Try it now at [gifcap.dev](https://gifcap.dev/).
 - Entire screen recordings, or selection of single window;
 - Intuitive trimming UI
 - Easy cropping via visual drag-and-drop
-
----
-
-**Wanna show your support?**
-
-I do love coffee ☕: `bitcoin:356S2FBHDwBUjki72KoForZ8YgYf4z3pFa`
