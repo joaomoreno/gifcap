@@ -1,0 +1,9 @@
+name: Build gifcap encoder
+description: Build gifcap encoder
+runs:
+  using: docker
+  image: encoder/Dockerfile
+  args:
+    - bash
+    - -c
+    - ./configure && make
