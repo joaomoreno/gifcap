@@ -6,21 +6,27 @@ CFLAGS=-O2 \
 	-Ivendor/libimagequant \
 	-Ivendor/gifsicle/src \
 	-Ivendor/gifsicle/include
-LIBS=vendor/libimagequant/*.o \
-	vendor/gifsicle/src/giffunc.o \
+LIBIMAGEQUANT_LIBS=vendor/libimagequant/blur.o \
+	vendor/libimagequant/kmeans.o \
+	vendor/libimagequant/libimagequant.o \
+	vendor/libimagequant/mediancut.o \
+	vendor/libimagequant/mempool.o \
+	vendor/libimagequant/nearest.o \
+	vendor/libimagequant/pam.o
+GIFSICLE_LIBS=vendor/gifsicle/src/giffunc.o \
 	vendor/gifsicle/src/fmalloc.o \
 	vendor/gifsicle/src/support.o \
 	vendor/gifsicle/src/gifwrite.o \
 	vendor/gifsicle/src/gifread.o
 
-encoder.js: encoder.c vendor/libimagequant/libimagequant.o vendor/gifsicle/gifsicle.o
-	$(CC) $(CFLAGS) -o $@ encoder.c $(LIBS)
+encoder.js: encoder.c vendor/libimagequant/libimagequant.o vendor/gifsicle/src/giffunc.o vendor/gifsicle/src/fmalloc.o vendor/gifsicle/src/support.o vendor/gifsicle/src/gifwrite.o vendor/gifsicle/src/gifread.o
+	$(CC) $(CFLAGS) -o $@ encoder.c $(LIBIMAGEQUANT_LIBS) $(GIFSICLE_LIBS)
 
-vendor/libimagequant/libimagequant.o:
+$(LIBIMAGEQUANT_LIBS):
 	cd vendor/libimagequant && make static
 
-vendor/gifsicle/gifsicle.o:
-	cd vendor/gifsicle && make
+$(GIFSICLE_LIBS):
+	cd vendor/gifsicle/src && make giffunc.o fmalloc.o support.o gifwrite.o gifread.o
 
 .PHONY: clean
 
