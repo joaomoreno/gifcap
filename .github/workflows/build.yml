@@ -1,5 +1,8 @@
 name: Build
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -9,5 +12,16 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: true
-      - name: Build
+      - name: Compile encoder
         uses: ./.github/actions/build
+      - name: Publish encoder
+        run: |
+          git config --global user.name 'João Moreno'
+          git config --global user.email 'joaomoreno@users.noreply.github.com'
+          cp encoder/encoder.{js,wasm} ${{ runner.temp }}
+          git clean -xfd .
+          git checkout gh-pages
+          cp ${{ runner.temp }}/encoder.{js,wasm} encoder
+          git add encoder/encoder.{js,wasm}
+          git commit -m 'update encoder'
+          git push
