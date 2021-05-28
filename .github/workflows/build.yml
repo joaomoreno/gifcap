@@ -11,6 +11,8 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v2
         with:
+          ref: main
+          fetch-depth: 0
           submodules: true
       - name: Compile encoder
         uses: ./.github/actions/build
