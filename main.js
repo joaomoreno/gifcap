@@ -92,15 +92,19 @@ class IdleView {
   view() {
     let content, actions;
 
+    const zeroPad = (num, places) => String(num).padStart(places, '0');
+    const d = new Date(); 
+    let fileName = `Recording ${zeroPad(d.getFullYear(),4)}-${zeroPad(d.getMonth()+1,2)}-${zeroPad(d.getDate(),2)} at ${zeroPad(d.getHours(),2)}.${zeroPad(d.getMinutes(),2)}.${zeroPad(d.getSeconds(),2)}.gif`;
+
     if (this.app.gif) {
       content = m('.recording-card', [
-        m('a', { href: this.app.gif.url, download: 'recording.gif', target: '_blank' }, [
+        m('a', { href: this.app.gif.url, download: fileName, target: '_blank' }, [
           m('img.recording', { src: this.app.gif.url })
         ]),
         m('footer', [
           m(Timer, { duration: this.app.gif.duration }),
           m('span.tag.is-small', [
-            m('a.recording-detail', { href: this.app.gif.url, download: 'recording.gif', target: '_blank' }, [
+            m('a.recording-detail', { href: this.app.gif.url, download: fileName, target: '_blank' }, [
               m('img', { src: 'https://icongr.am/octicons/download.svg?size=16&color=333333' }),
               humanSize(this.app.gif.size)
             ])
@@ -109,7 +113,7 @@ class IdleView {
       ]);
 
       actions = [
-        m(Button, { label: 'Download', icon: 'download', a: { href: this.app.gif.url, download: 'recording.gif', target: '_blank' }, primary: true }),
+        m(Button, { label: 'Download', icon: 'download', a: { href: this.app.gif.url, download: fileName, target: '_blank' }, primary: true }),
         m(Button, { label: 'Edit', icon: 'pencil', onclick: () => this.app.editGif() }),
         m(Button, { label: 'Discard', icon: 'trashcan', onclick: () => this.app.discardGif() })
       ];
