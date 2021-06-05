@@ -12,13 +12,19 @@ jobs:
           submodules: true
       - name: Compile encoder
         uses: ./.github/actions/build
-      - name: Upload encoder
+      - name: Upload
+        if: github.ref == 'refs/heads/prod'
         uses: actions/upload-artifact@v2
         with:
-          name: encoder
           path: |
-            encoder/encoder.js
-            encoder/encoder.wasm
+            *.js
+            *.css
+            *.html
+            README.md
+            LICENSE
+            media/**
+            encoder/*.js
+            encoder/*.wasm
 
   deploy:
     runs-on: ubuntu-latest
@@ -30,15 +36,12 @@ jobs:
         with:
           ref: gh-pages
           fetch-depth: 0
-      - name: Download encoder
+      - name: Download
         uses: actions/download-artifact@v2
-        with:
-          name: encoder
-          path: encoder
       - name: Publish
         run: |
           git config --global user.name 'João Moreno'
           git config --global user.email 'joaomoreno@users.noreply.github.com'
-          git add encoder/encoder.{js,wasm}
-          git commit -m 'update encoder'
-          git push
+          git add .
+          # git commit -m 'update encoder'
+          # git push
