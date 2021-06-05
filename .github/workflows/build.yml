@@ -1,8 +1,5 @@
 name: Build
-on:
-  push:
-    branches:
-      - main
+on: push
 
 jobs:
   build:
@@ -11,19 +8,37 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v2
         with:
-          ref: main
           fetch-depth: 0
           submodules: true
       - name: Compile encoder
         uses: ./.github/actions/build
-      - name: Publish encoder
+      - name: Upload encoder
+        uses: actions/upload-artifact@v2
+        with:
+          name: encoder
+          path: |
+            encoder/encoder.js
+            encoder/encoder.wasm
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/prod'
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+      - name: Download encoder
+        uses: actions/download-artifact@v2
+        with:
+          name: encoder
+          path: encoder
+      - name: Publish
         run: |
           git config --global user.name 'João Moreno'
           git config --global user.email 'joaomoreno@users.noreply.github.com'
-          cp encoder/encoder.{js,wasm} ${{ runner.temp }}
-          git clean -xfd .
-          git checkout gh-pages
-          cp ${{ runner.temp }}/encoder.{js,wasm} encoder
           git add encoder/encoder.{js,wasm}
           git commit -m 'update encoder'
           git push
