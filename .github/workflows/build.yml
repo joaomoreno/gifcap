@@ -16,6 +16,7 @@ jobs:
         if: github.ref == 'refs/heads/prod'
         uses: actions/upload-artifact@v2
         with:
+          name: build
           path: |
             *.js
             *.css
@@ -39,6 +40,7 @@ jobs:
       - name: Download
         uses: actions/download-artifact@v2
         with:
+          name: build
           path: .
       - name: Publish
         run: |
