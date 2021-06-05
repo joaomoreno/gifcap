@@ -38,7 +38,8 @@ jobs:
           fetch-depth: 0
       - name: Download
         uses: actions/download-artifact@v2
-        path: .
+        with:
+          path: .
       - name: Publish
         run: |
           git config --global user.name 'João Moreno'
