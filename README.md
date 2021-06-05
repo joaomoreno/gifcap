@@ -1,5 +1,7 @@
 # gifcap
 
+[![Build](https://github.com/joaomoreno/gifcap/actions/workflows/build.yml/badge.svg)](https://github.com/joaomoreno/gifcap/actions/workflows/build.yml)
+
 Record your screen into an animated GIF, all you need is a browser!
 
 👉 [gifcap.dev](https://gifcap.dev/)
