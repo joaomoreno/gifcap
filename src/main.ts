@@ -889,12 +889,18 @@ class RenderView implements m.ClassComponent<RenderViewAttrs> {
   }
 }
 
-type StartState = { name: "start" };
-type PlayingState = { name: "playing"; gif: Gif; recording: Recording };
-type RecordingState = { name: "recording"; captureStream: MediaStream };
-type PreviewingState = { name: "previewing"; recording: Recording };
-type RenderingState = { name: "rendering"; recording: Recording; renderOptions: RenderOptions };
-type State = StartState | PlayingState | RecordingState | PreviewingState | RenderingState;
+type State =
+  | { name: "start" }
+  | { name: "playing"; gif: Gif; recording: Recording }
+  | { name: "recording"; captureStream: MediaStream }
+  | { name: "previewing"; recording: Recording }
+  | { name: "rendering"; recording: Recording; renderOptions: RenderOptions };
+
+function assertState<T extends State["name"], E extends T>(actual: T, expected: E): asserts actual is E {
+  if (actual !== expected) {
+    throw new Error("Invalid state");
+  }
+}
 
 class App {
   private _state: State = { name: "start" };
@@ -1001,42 +1007,26 @@ class App {
   }
 
   stopRecording(recording: Recording) {
-    if (this.state.name !== "recording") {
-      throw new Error("Invalid state");
-    }
-
     this.state = { name: "previewing", recording };
   }
 
   startRendering(renderOptions: RenderOptions) {
-    if (this.state.name !== "previewing") {
-      throw new Error("Invalid state");
-    }
-
+    assertState(this.state.name, "previewing");
     this.state = { name: "rendering", recording: this.state.recording, renderOptions };
   }
 
   finishRendering(gif: Gif) {
-    if (this.state.name !== "rendering") {
-      throw new Error("Invalid state");
-    }
-
+    assertState(this.state.name, "rendering");
     this.state = { name: "playing", gif, recording: this.state.recording };
   }
 
   cancelRendering() {
-    if (this.state.name !== "rendering") {
-      throw new Error("Invalid state");
-    }
-
+    assertState(this.state.name, "rendering");
     this.state = { name: "previewing", recording: this.state.recording };
   }
 
   editGif() {
-    if (this.state.name !== "playing") {
-      throw new Error("Invalid state");
-    }
-
+    assertState(this.state.name, "playing");
     this.state = { name: "previewing", recording: this.state.recording };
   }
 
