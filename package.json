@@ -9,10 +9,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "dist": "esbuild src/main.ts --bundle --minify --sourcemap --target=chrome58,firefox57,safari11,edge16 --outfile=dist/main.js",
-    "watch": "npm run dist -- --watch",
     "serve": "serve",
     "build": "run-s -l typecheck dist",
-    "dev": "run-p -l typecheck watch serve"
+    "dev": "run-p \"typecheck -- --watch --preserveWatchOutput\" \"dist -- --watch\" serve"
   },
   "repository": {
     "type": "git",
