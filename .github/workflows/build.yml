@@ -13,8 +13,8 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: "14"
-      - name: Build main
-        run: npm run build
+      - run: npm install
+      - run: npm run build
       - name: Compile encoder
         uses: ./.github/actions/build
       - name: Upload
