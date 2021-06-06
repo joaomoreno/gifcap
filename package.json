@@ -1,0 +1,46 @@
+{
+  "name": "gifcap",
+  "version": "1.0.0",
+  "description": "gifcap.dev",
+  "main": "main.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/main.ts --bundle --minify --sourcemap --target=chrome58,firefox57,safari11,edge16 --outfile=dist/main.js",
+    "watch": "npm run build -- --watch",
+    "serve": "serve",
+    "dev": "run-p -l typecheck watch serve"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joaomoreno/gifcap.git"
+  },
+  "keywords": [
+    "gifcap",
+    "gif",
+    "screen",
+    "recording",
+    "encoder"
+  ],
+  "author": "João Moreno",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/joaomoreno/gifcap/issues"
+  },
+  "homepage": "https://github.com/joaomoreno/gifcap#readme",
+  "devDependencies": {
+    "@types/mithril": "^2.0.7",
+    "esbuild": "^0.12.6",
+    "npm-run-all": "^4.1.5",
+    "serve": "^11.3.2",
+    "typescript": "^4.3.2"
+  },
+  "dependencies": {
+    "mithril": "^2.0.4"
+  },
+  "prettier": {
+    "printWidth": 120
+  }
+}

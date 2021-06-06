@@ -1,5 +1,5 @@
 :root {
-  --color-primary: #AD2C2C;
+  --color-primary: #ad2c2c;
   --color-lightGrey: #d2d6dd;
   --color-grey: #5e5e5e;
   --color-darkGrey: #3f4144;
@@ -8,10 +8,13 @@
   --grid-maxWidth: 120rem;
   --grid-gutter: 2rem;
   --font-size: 1.6rem;
-  --font-family: 'Roboto', sans-serif;
+  --font-family: "Roboto", sans-serif;
 }
 
-html, body, #app-container, #app {
+html,
+body,
+#app-container,
+#app {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -62,7 +65,7 @@ img {
 }
 
 h1 {
-  font-family: 'Baloo 2', cursive;
+  font-family: "Baloo 2", cursive;
   font-size: 5em;
   margin: 0.5em;
   transition-property: font-size, margin;
@@ -78,11 +81,11 @@ h1 {
 }
 
 .gif {
-  color: #AD2C2C;
+  color: #ad2c2c;
 }
 
 .cap {
-  color: #2E2E2E;
+  color: #2e2e2e;
 }
 
 .button {
@@ -137,7 +140,8 @@ h1 {
   overflow: hidden;
 }
 
-.recording, .preview {
+.recording,
+.preview {
   box-shadow: 0px 0px 5px 1px #00000054;
 }
 
@@ -171,7 +175,8 @@ h1 {
   justify-content: space-between;
 }
 
-.tag, .tag > a {
+.tag,
+.tag > a {
   display: flex;
   align-items: center;
 }
@@ -209,15 +214,15 @@ h1 {
 }
 
 .playbar > .trim-bar {
-  border-top: 2px solid #AD2C2C;
+  border-top: 2px solid #ad2c2c;
   position: absolute;
   top: calc(50% + 4px);
 }
 
-.playbar > .trim-bar > .trim-start, 
+.playbar > .trim-bar > .trim-start,
 .playbar > .trim-bar > .trim-end {
   position: absolute;
-  border: 6px solid #AD2C2C;
+  border: 6px solid #ad2c2c;
   border-bottom-color: transparent;
   cursor: pointer;
 }

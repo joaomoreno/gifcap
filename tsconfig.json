@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2015", "DOM"],
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "target": "ES6",
+    "rootDir": "src"
+  },
+  "exclude": ["node_modules"]
+}
