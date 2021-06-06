@@ -6,6 +6,20 @@ declare global {
   }
 }
 
+interface GifEncoderEvent {
+  progress: number;
+  finished: Blob;
+}
+
+declare class GifEncoder {
+  constructor(opts: { width: number; height: number });
+  on<E extends keyof GifEncoderEvent>(event: E, fn: (data: GifEncoderEvent[E]) => void): void;
+  once<E extends keyof GifEncoderEvent>(event: E, fn: (data: GifEncoderEvent[E]) => void): void;
+  addFrame(imageData: ImageData, delay: number): void;
+  render(): void;
+  abort(): void;
+}
+
 const FPS = 10;
 const FRAME_DELAY = Math.floor(1000 / FPS);
 
@@ -14,16 +28,17 @@ interface Frame {
   readonly timestamp: number;
 }
 
-// TODO: split this into 3 interfaces: RecordingData, Recording, Gif
 interface Recording {
-  readonly url?: string;
-  duration?: number;
-  readonly size?: number;
-  width?: number;
-  height?: number;
-  readonly frames?: Frame[];
-  readonly captureStream?: MediaStream;
-  readonly blob?: Blob;
+  readonly width: number;
+  readonly height: number;
+  readonly frames: Frame[];
+}
+
+interface Gif {
+  readonly blob: Blob;
+  readonly url: string;
+  readonly duration: number;
+  readonly size: number;
 }
 
 interface RenderOptions {
@@ -169,107 +184,132 @@ interface ViewAttrs {
   readonly app: App;
 }
 
-class IdleView implements m.ClassComponent<ViewAttrs> {
-  private app: App;
+interface StartViewAttrs extends ViewAttrs {}
 
-  constructor(vnode: m.CVnode<ViewAttrs>) {
+class StartView implements m.ClassComponent<StartViewAttrs> {
+  private readonly app: App;
+
+  constructor(vnode: m.CVnode<StartViewAttrs>) {
     this.app = vnode.attrs.app;
   }
 
   view() {
-    let content: m.Children, actions: m.Children;
-
-    if (this.app.gif) {
-      content = m(".recording-card", [
-        m(
-          "a",
-          {
-            href: this.app.gif.url,
-            download: "recording.gif",
-            target: "_blank",
-          },
-          [m("img.recording", { src: this.app.gif.url })]
-        ),
-        m("footer", [
-          m(Timer, { duration: this.app.gif.duration! }),
-          m("span.tag.is-small", [
-            m(
-              "a.recording-detail",
-              {
-                href: this.app.gif.url,
-                download: "recording.gif",
-                target: "_blank",
-              },
-              [
-                m("img", {
-                  src: "https://icongr.am/octicons/download.svg?size=16&color=333333",
-                }),
-                humanSize(this.app.gif.size!),
-              ]
-            ),
-          ]),
-        ]),
-      ]);
-
-      actions = [
-        m(Button, {
-          label: "Download",
-          icon: "download",
-          a: {
-            href: this.app.gif.url,
-            download: "recording.gif",
-            target: "_blank",
-          },
-          primary: true,
-        }),
-        m(Button, {
-          label: "Edit",
-          icon: "pencil",
-          onclick: () => this.app.editGif(),
-        }),
-        m(Button, {
-          label: "Discard",
-          icon: "trashcan",
-          onclick: () => this.app.discardGif(),
-        }),
-      ];
-    } else {
-      content = [
-        m("p", "Create animated GIFs from a screen recording."),
-        m("p", "Client-side only, no data is uploaded. Modern browser required."),
-        isMobile ? m("p", "Sorry, mobile does not support screen recording.") : undefined,
-        isMobile
-          ? undefined
-          : m(Button, {
-              label: "Start Recording",
-              icon: "play",
-              onclick: () => this.app.startRecording(),
-              primary: true,
-            }),
-      ];
-    }
-
-    return [m(DOMView, { actions }, content)];
+    return m(DOMView, [
+      m("p", "Create animated GIFs from a screen recording."),
+      m("p", "Client-side only, no data is uploaded. Modern browser required."),
+      isMobile ? m("p", "Sorry, mobile does not support screen recording.") : undefined,
+      isMobile
+        ? undefined
+        : m(Button, {
+            label: "Start Recording",
+            icon: "play",
+            onclick: () => this.app.startRecording(),
+            primary: true,
+          }),
+    ]);
   }
 }
 
-class RecordView implements m.ClassComponent<ViewAttrs> {
-  private app: App;
-  private recording: Recording;
-  private startTime: number | undefined;
-  private _onbeforeremove: Function | undefined;
+interface PlayViewAttrs extends ViewAttrs {
+  readonly gif: Gif;
+}
 
-  constructor(vnode: m.CVnode<ViewAttrs>) {
+class PlayView implements m.ClassComponent<PlayViewAttrs> {
+  private readonly app: App;
+  private readonly gif: Gif;
+
+  constructor(vnode: m.CVnode<PlayViewAttrs>) {
     this.app = vnode.attrs.app;
-    this.recording = this.app.recording!;
-    this.startTime = undefined;
+    this.gif = vnode.attrs.gif;
   }
 
-  async oncreate(vnode: m.VnodeDOM<ViewAttrs, this>) {
+  view() {
+    const actions = [
+      m(Button, {
+        label: "Download",
+        icon: "download",
+        a: {
+          href: this.gif.url,
+          download: "recording.gif",
+          target: "_blank",
+        },
+        primary: true,
+      }),
+      m(Button, {
+        label: "Edit",
+        icon: "pencil",
+        onclick: () => this.app.editGif(),
+      }),
+      m(Button, {
+        label: "Discard",
+        icon: "trashcan",
+        onclick: () => this.app.discardGif(),
+      }),
+    ];
+
+    return [
+      m(
+        DOMView,
+        { actions },
+        m(".recording-card", [
+          m(
+            "a",
+            {
+              href: this.gif.url,
+              download: "recording.gif",
+              target: "_blank",
+            },
+            [m("img.recording", { src: this.gif.url })]
+          ),
+          m("footer", [
+            m(Timer, { duration: this.gif.duration }),
+            m("span.tag.is-small", [
+              m(
+                "a.recording-detail",
+                {
+                  href: this.gif.url,
+                  download: "recording.gif",
+                  target: "_blank",
+                },
+                [
+                  m("img", {
+                    src: "https://icongr.am/octicons/download.svg?size=16&color=333333",
+                  }),
+                  humanSize(this.gif.size),
+                ]
+              ),
+            ]),
+          ]),
+        ])
+      ),
+    ];
+  }
+}
+
+interface RecordViewAttrs extends ViewAttrs {
+  readonly captureStream: MediaStream;
+}
+
+class RecordView implements m.ClassComponent<RecordViewAttrs> {
+  private readonly app: App;
+  private readonly captureStream: MediaStream;
+
+  private startTime: number = 0;
+  private width: number = 0;
+  private height: number = 0;
+  private frames: Frame[] = [];
+  private _onbeforeremove: Function | undefined;
+
+  constructor(vnode: m.CVnode<RecordViewAttrs>) {
+    this.app = vnode.attrs.app;
+    this.captureStream = vnode.attrs.captureStream;
+  }
+
+  async oncreate(vnode: m.VnodeDOM<RecordViewAttrs, this>) {
     const video: HTMLVideoElement = vnode.dom.getElementsByTagName("video")[0];
     const canvas: HTMLCanvasElement = vnode.dom.getElementsByTagName("canvas")[0];
 
-    video.srcObject = this.recording.captureStream!;
+    video.srcObject = this.captureStream;
 
     const ctx = canvas.getContext("2d")!;
 
@@ -279,35 +319,32 @@ class RecordView implements m.ClassComponent<ViewAttrs> {
         return;
       }
 
-      const first = this.startTime === undefined;
+      const first = this.startTime === 0;
 
       if (first) {
         const width = video.videoWidth;
         const height = video.videoHeight;
 
         this.startTime = Date.now();
-        this.recording.width = width;
-        this.recording.height = height;
+        this.width = width;
+        this.height = height;
         canvas.width = width;
         canvas.height = height;
       }
 
       ctx.drawImage(video, 0, 0);
-      const imageData = ctx.getImageData(0, 0, this.recording.width!, this.recording.height!);
+      const imageData = ctx.getImageData(0, 0, this.width, this.height);
 
-      this.recording.frames!.push({
+      this.frames.push({
         imageData,
-        timestamp: first ? 0 : Date.now() - this.startTime!,
+        timestamp: first ? 0 : Date.now() - this.startTime,
       });
     };
 
     const redrawInterval = setInterval(() => m.redraw(), 100);
 
-    const track = this.recording.captureStream!.getVideoTracks()[0];
-    const endedListener = () => {
-      this.app.stopRecording();
-      m.redraw();
-    };
+    const track = this.captureStream.getVideoTracks()[0];
+    const endedListener = () => this.stopRecording();
     track.addEventListener("ended", endedListener);
 
     this._onbeforeremove = () => {
@@ -315,8 +352,6 @@ class RecordView implements m.ClassComponent<ViewAttrs> {
       clearInterval(redrawInterval);
       track.removeEventListener("ended", endedListener);
       track.stop();
-
-      this.recording.duration = this.recording.frames![this.recording.frames!.length - 1].timestamp + FRAME_DELAY;
     };
 
     m.redraw();
@@ -331,18 +366,26 @@ class RecordView implements m.ClassComponent<ViewAttrs> {
       m(DOMView, [
         m("p", [
           m(Timer, {
-            duration: this.startTime === undefined ? 0 : Date.now() - this.startTime,
+            duration: this.startTime === 0 ? 0 : Date.now() - this.startTime,
           }),
         ]),
         m(Button, {
           label: "Stop Recording",
           icon: "square-fill",
-          onclick: () => this.app.stopRecording(),
+          onclick: () => this.stopRecording(),
         }),
         m("canvas.hidden", { width: 640, height: 480 }),
         m("video.hidden", { autoplay: true, playsinline: true }),
       ]),
     ];
+  }
+
+  private stopRecording(): void {
+    this.app.stopRecording({
+      width: this.width,
+      height: this.height,
+      frames: this.frames,
+    });
   }
 }
 
@@ -371,56 +414,40 @@ interface Range {
   end: number;
 }
 
-class PreviewView implements m.ClassComponent<ViewAttrs> {
-  private app: App;
-  private recording: Recording;
+interface PreviewViewAttrs extends ViewAttrs {
+  readonly recording: Recording;
+}
+
+class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
+  private readonly app: App;
+  private readonly recording: Recording;
+  private readonly duration: number;
+
   private canvas!: HTMLCanvasElement;
   private playbar!: HTMLDivElement;
   private content!: HTMLDivElement;
   private viewportDisposable!: Function;
-  private viewport: Viewport = {
-    width: 0,
-    height: 0,
-    top: 0,
-    left: 0,
-    zoom: 1,
-  };
-  private playback: Playback;
 
-  // TODO: join these two into RenderOptions
+  private viewport: Viewport;
+  private playback: Playback;
   private trim: Range;
   private crop: Rect;
 
-  constructor(vnode: m.CVnode<ViewAttrs>) {
+  constructor(vnode: m.CVnode<PreviewViewAttrs>) {
     this.app = vnode.attrs.app;
-    this.recording = this.app.recording!;
-
-    this.playback = {
-      head: 0,
-      start: 0,
-      offset: 0,
-      end: this.recording.duration!,
-      disposable: undefined,
-    };
-
-    this.trim = {
-      start: 0,
-      end: this.recording.duration!,
-    };
-
-    this.crop = {
-      top: 0,
-      left: 0,
-      width: this.recording.width!,
-      height: this.recording.height!,
-    };
+    this.recording = vnode.attrs.recording;
+    this.duration = this.recording.frames[this.recording.frames.length - 1].timestamp + FRAME_DELAY;
+    this.viewport = { width: 0, height: 0, top: 0, left: 0, zoom: 1 };
+    this.playback = { head: 0, start: 0, offset: 0, end: this.duration, disposable: undefined };
+    this.trim = { start: 0, end: this.duration };
+    this.crop = { top: 0, left: 0, width: this.recording.width, height: this.recording.height };
   }
 
-  get isPlaying() {
+  private get isPlaying() {
     return !!this.playback.disposable;
   }
 
-  async oncreate(vnode: m.VnodeDOM<ViewAttrs, this>) {
+  async oncreate(vnode: m.VnodeDOM<PreviewViewAttrs, this>) {
     this.canvas = vnode.dom.getElementsByTagName("canvas")[0];
     this.playbar = vnode.dom.querySelector(".playbar")!;
     this.content = vnode.dom.querySelector(".content")!;
@@ -440,8 +467,8 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
       0.1,
       Math.min(
         1,
-        (this.viewport.width * 0.95) / this.recording.width!,
-        (this.viewport.height * 0.95) / this.recording.height!
+        (this.viewport.width * 0.95) / this.recording.width,
+        (this.viewport.height * 0.95) / this.recording.height
       )
     );
   }
@@ -474,7 +501,7 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
         m("input", {
           type: "range",
           min: 0,
-          max: `${this.recording.duration}`,
+          max: `${this.duration}`,
           value: `${this.playback.head}`,
           disabled: this.isPlaying,
           oninput: (e: InputEvent) => this.onPlaybarInput(e),
@@ -483,8 +510,8 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
           ".trim-bar",
           {
             style: {
-              left: `${(this.trim.start * 100) / this.recording.duration!}%`,
-              width: `${((this.trim.end - this.trim.start) * 100) / this.recording.duration!}%`,
+              left: `${(this.trim.start * 100) / this.duration}%`,
+              width: `${((this.trim.end - this.trim.start) * 100) / this.duration}%`,
             },
           },
           [
@@ -511,8 +538,8 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
     ];
 
     const scale = (value: number) => value * this.viewport.zoom;
-    const width = scale(this.recording.width!);
-    const height = scale(this.recording.height!);
+    const width = scale(this.recording.width);
+    const height = scale(this.recording.height);
     const top = Math.floor(scale(this.viewport.top) + this.viewport.height / 2 - height / 2);
     const left = Math.floor(scale(this.viewport.left) + this.viewport.width / 2 - width / 2);
 
@@ -548,9 +575,9 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
                 m(".crop-box", {
                   style: {
                     // here be dragons!
-                    clipPath: `polygon(evenodd, 0 0, 0 ${scale(this.recording.height!)}px, ${scale(
-                      this.recording.width!
-                    )}% ${scale(this.recording.height!)}px, ${scale(this.recording.width!)}% 0, 0 0, ${scale(
+                    clipPath: `polygon(evenodd, 0 0, 0 ${scale(this.recording.height)}px, ${scale(
+                      this.recording.width
+                    )}% ${scale(this.recording.height)}px, ${scale(this.recording.width)}% 0, 0 0, ${scale(
                       this.crop.left
                     )}px ${scale(this.crop.top)}px, ${scale(this.crop.left)}px ${scale(
                       this.crop.top + this.crop.height
@@ -577,12 +604,12 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
       screenX: event.screenX,
       head: handle === "start" ? this.trim.start : this.trim.end,
       min: handle === "start" ? 0 : this.trim.start + FRAME_DELAY,
-      max: handle === "start" ? this.trim.end - FRAME_DELAY : this.recording.duration!,
+      max: handle === "start" ? this.trim.end - FRAME_DELAY : this.duration,
     };
 
     const onMouseMove = (e: MouseEvent) => {
       const diff = e.screenX - start.screenX;
-      const head = start.head + Math.round((diff * this.recording.duration!) / start.width);
+      const head = start.head + Math.round((diff * this.duration) / start.width);
       this.trim[handle] = Math.max(start.min, Math.min(start.max, head));
 
       m.redraw();
@@ -599,8 +626,8 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
         this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, this.playback.head));
         this.playback.offset = Date.now() - this.playback.head + this.playback.start;
 
-        const index = getFrameIndex(this.recording.frames!, this.playback.head);
-        ctx.putImageData(this.recording.frames![index].imageData, 0, 0);
+        const index = getFrameIndex(this.recording.frames, this.playback.head);
+        ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
       }
 
       m.redraw();
@@ -625,16 +652,16 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
   }
 
   onCrop(event: MouseEvent) {
-    const width = this.recording.width! * this.viewport.zoom;
-    const height = this.recording.height! * this.viewport.zoom;
+    const width = this.recording.width * this.viewport.zoom;
+    const height = this.recording.height * this.viewport.zoom;
     const top = Math.floor(this.viewport.top * this.viewport.zoom + this.viewport.height / 2 - height / 2);
     const left = Math.floor(this.viewport.left * this.viewport.zoom + this.viewport.width / 2 - width / 2);
     const offsetTop = (event.currentTarget as HTMLDivElement).offsetTop;
     const offsetLeft = (event.currentTarget as HTMLDivElement).offsetLeft;
     const mouseTop = (event: MouseEvent) =>
-      Math.max(0, Math.min(this.recording.height!, (event.clientY - offsetTop - top) / this.viewport.zoom));
+      Math.max(0, Math.min(this.recording.height, (event.clientY - offsetTop - top) / this.viewport.zoom));
     const mouseLeft = (event: MouseEvent) =>
-      Math.max(0, Math.min(this.recording.width!, (event.clientX - offsetLeft - left) / this.viewport.zoom));
+      Math.max(0, Math.min(this.recording.width, (event.clientX - offsetLeft - left) / this.viewport.zoom));
     const point = (event: MouseEvent) => ({
       top: Math.round(mouseTop(event)),
       left: Math.round(mouseLeft(event)),
@@ -646,8 +673,8 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
       const to = point(event);
       const top = Math.max(0, Math.min(from.top, to.top));
       const left = Math.max(0, Math.min(from.left, to.left));
-      const width = Math.min(this.recording.width! - left, Math.abs(from.left - to.left));
-      const height = Math.min(this.recording.height! - top, Math.abs(from.top - to.top));
+      const width = Math.min(this.recording.width - left, Math.abs(from.left - to.left));
+      const height = Math.min(this.recording.height - top, Math.abs(from.top - to.top));
 
       this.crop = { top, left, width, height };
       didMove = true;
@@ -663,8 +690,8 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
         this.crop = {
           top: 0,
           left: 0,
-          width: this.recording.width!,
-          height: this.recording.height!,
+          width: this.recording.width,
+          height: this.recording.height,
         };
       }
 
@@ -706,8 +733,8 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
     this.playback.head = (event.target as HTMLInputElement).valueAsNumber;
 
     const ctx = this.canvas.getContext("2d")!;
-    const index = getFrameIndex(this.recording.frames!, this.playback.head);
-    ctx.putImageData(this.recording.frames![index].imageData, 0, 0);
+    const index = getFrameIndex(this.recording.frames, this.playback.head);
+    ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
   }
 
   play() {
@@ -727,10 +754,10 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
       this.playback.head =
         this.playback.start + ((Date.now() - this.playback.offset) % (this.playback.end - this.playback.start));
 
-      const index = getFrameIndex(this.recording.frames!, this.playback.head);
+      const index = getFrameIndex(this.recording.frames, this.playback.head);
 
       if (lastIndex !== index) {
-        ctx.putImageData(this.recording.frames![index].imageData, 0, 0);
+        ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
       }
 
       lastIndex = index;
@@ -763,42 +790,29 @@ class PreviewView implements m.ClassComponent<ViewAttrs> {
   }
 }
 
-interface GifEncoderEvent {
-  progress: number;
-  finished: Blob;
+interface RenderViewAttrs extends ViewAttrs {
+  readonly recording: Recording;
+  readonly renderOptions: RenderOptions;
 }
 
-declare class GifEncoder {
-  constructor(opts: { width: number; height: number });
-  on<E extends keyof GifEncoderEvent>(event: E, fn: (data: GifEncoderEvent[E]) => void): void;
-  once<E extends keyof GifEncoderEvent>(event: E, fn: (data: GifEncoderEvent[E]) => void): void;
-  addFrame(imageData: ImageData, delay: number): void;
-  render(): void;
-  abort(): void;
-}
+class RenderView implements m.ClassComponent<RenderViewAttrs> {
+  private readonly app: App;
+  private readonly recording: Recording;
+  private readonly renderOptions: RenderOptions;
 
-class RenderView implements m.ClassComponent<ViewAttrs> {
-  private app: App;
-  private recording: Recording;
-
-  // TODO: join these two into RenderOptions
-  private trim: Range;
-  private crop: Rect;
-  private progress: number;
+  private progress = 0;
   private _onbeforeremove: Function | undefined;
 
-  constructor(vnode: m.CVnode<ViewAttrs>) {
+  constructor(vnode: m.CVnode<RenderViewAttrs>) {
     this.app = vnode.attrs.app;
-    this.recording = this.app.recording!;
-    this.trim = this.app.renderOptions!.trim;
-    this.crop = this.app.renderOptions!.crop;
-    this.progress = 0;
+    this.recording = vnode.attrs.recording;
+    this.renderOptions = vnode.attrs.renderOptions;
   }
 
-  async oncreate(vnode: m.VnodeDOM<ViewAttrs, this>) {
+  async oncreate(vnode: m.VnodeDOM<RenderViewAttrs, this>) {
     const gif = new GifEncoder({
-      width: this.crop.width,
-      height: this.crop.height,
+      width: this.renderOptions.crop.width,
+      height: this.renderOptions.crop.height,
     });
 
     gif.on("progress", (progress) => {
@@ -807,18 +821,15 @@ class RenderView implements m.ClassComponent<ViewAttrs> {
     });
 
     gif.once("finished", (blob) => {
-      this.app.setRenderedRecording({
-        duration: this.trim.end - this.trim.start,
-        size: blob.size,
-        blob,
-        url: URL.createObjectURL(blob),
-      });
-      m.redraw();
+      const url = URL.createObjectURL(blob);
+      const duration = this.renderOptions.trim.end - this.renderOptions.trim.start;
+
+      this.app.finishRendering({ blob, url, duration, size: blob.size });
     });
 
     const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d")!;
-    const start = getFrameIndex(this.recording.frames!, this.trim.start);
-    const end = getFrameIndex(this.recording.frames!, this.trim.end);
+    const start = getFrameIndex(this.recording.frames, this.renderOptions.trim.start);
+    const end = getFrameIndex(this.recording.frames, this.renderOptions.trim.end);
 
     const processFrame = (index: number) => {
       if (index > end) {
@@ -827,16 +838,21 @@ class RenderView implements m.ClassComponent<ViewAttrs> {
         return;
       }
 
-      const frame = this.recording.frames![index];
+      const frame = this.recording.frames[index];
       let imageData = frame.imageData;
 
       // we always copy the imagedata, because the user might want to
       // go back to edit, and we can't afford to lose frames which
       // were moved to web workers
       ctx.putImageData(imageData, 0, 0);
-      imageData = ctx.getImageData(this.crop.left, this.crop.top, this.crop.width, this.crop.height);
+      imageData = ctx.getImageData(
+        this.renderOptions.crop.left,
+        this.renderOptions.crop.top,
+        this.renderOptions.crop.width,
+        this.renderOptions.crop.height
+      );
 
-      const delay = index < end ? this.recording.frames![index + 1].timestamp - frame.timestamp : 100;
+      const delay = index < end ? this.recording.frames[index + 1].timestamp - frame.timestamp : 100;
       gif.addFrame(imageData, delay);
       setTimeout(() => processFrame(index + 1), 0);
     };
@@ -873,23 +889,27 @@ class RenderView implements m.ClassComponent<ViewAttrs> {
   }
 }
 
-enum State {
-  Idle,
-  Recording,
-  Preview,
-  Rendering,
-}
+type StartState = { name: "start" };
+type PlayingState = { name: "playing"; gif: Gif; recording: Recording };
+type RecordingState = { name: "recording"; captureStream: MediaStream };
+type PreviewingState = { name: "previewing"; recording: Recording };
+type RenderingState = { name: "rendering"; recording: Recording; renderOptions: RenderOptions };
+type State = StartState | PlayingState | RecordingState | PreviewingState | RenderingState;
 
 class App {
-  state: State;
-  recording?: Recording;
-  gif?: Recording;
-  renderOptions?: RenderOptions;
+  private _state: State = { name: "start" };
+
+  private get state(): State {
+    return this._state;
+  }
+
+  private set state(state: State) {
+    this._state = state;
+    m.redraw();
+  }
 
   constructor() {
-    this.state = State.Idle;
-    this.recording = undefined;
-    window.onbeforeunload = () => (this.recording ? "" : null);
+    window.onbeforeunload = () => (this.state.name !== "start" ? "" : null);
   }
 
   view() {
@@ -897,7 +917,7 @@ class App {
       "section",
       {
         id: "app",
-        class: this.state === State.Idle && !this.recording ? "home" : "",
+        class: this.state.name === "start" ? "home" : "",
       },
       [
         m("section", { id: "app-body" }, [
@@ -945,21 +965,23 @@ class App {
   }
 
   body() {
-    switch (this.state) {
-      case State.Idle:
-        return m(IdleView, { app: this });
-      case State.Recording:
-        return m(RecordView, { app: this });
-      case State.Preview:
-        return m(PreviewView, { app: this });
-      case State.Rendering:
-        return m(RenderView, { app: this });
+    switch (this.state.name) {
+      case "start":
+        return m(StartView, { app: this });
+      case "playing":
+        return m(PlayView, { app: this, gif: this.state.gif });
+      case "recording":
+        return m(RecordView, { app: this, captureStream: this.state.captureStream });
+      case "previewing":
+        return m(PreviewView, { app: this, recording: this.state.recording });
+      case "rendering":
+        return m(RenderView, { app: this, recording: this.state.recording, renderOptions: this.state.renderOptions });
     }
   }
 
   async startRecording() {
     if (
-      this.recording &&
+      this.state.name !== "start" &&
       !window.confirm("This will discard the current recording, are you sure you want to continue?")
     ) {
       return;
@@ -970,13 +992,7 @@ class App {
         video: { width: 9999, height: 9999 },
       });
 
-      this.state = State.Recording;
-      this.recording = {
-        captureStream,
-        width: undefined,
-        height: undefined,
-        frames: [],
-      };
+      this.state = { name: "recording", captureStream };
       m.redraw.sync();
     } catch (err) {
       console.error(err);
@@ -984,35 +1000,48 @@ class App {
     }
   }
 
-  stopRecording() {
-    this.state = State.Preview;
+  stopRecording(recording: Recording) {
+    if (this.state.name !== "recording") {
+      throw new Error("Invalid state");
+    }
+
+    this.state = { name: "previewing", recording };
   }
 
   startRendering(renderOptions: RenderOptions) {
-    this.state = State.Rendering;
-    this.renderOptions = renderOptions;
+    if (this.state.name !== "previewing") {
+      throw new Error("Invalid state");
+    }
+
+    this.state = { name: "rendering", recording: this.state.recording, renderOptions };
   }
 
-  setRenderedRecording(recording: Recording) {
-    this.state = State.Idle;
-    this.gif = recording;
-    this.renderOptions = undefined;
+  finishRendering(gif: Gif) {
+    if (this.state.name !== "rendering") {
+      throw new Error("Invalid state");
+    }
+
+    this.state = { name: "playing", gif, recording: this.state.recording };
   }
 
   cancelRendering() {
-    this.state = State.Preview;
-    this.renderOptions = undefined;
+    if (this.state.name !== "rendering") {
+      throw new Error("Invalid state");
+    }
+
+    this.state = { name: "previewing", recording: this.state.recording };
   }
 
   editGif() {
-    this.state = State.Preview;
-    this.gif = undefined;
+    if (this.state.name !== "playing") {
+      throw new Error("Invalid state");
+    }
+
+    this.state = { name: "previewing", recording: this.state.recording };
   }
 
   discardGif() {
-    this.state = State.Idle;
-    this.gif = undefined;
-    this.recording = undefined;
+    this.state = { name: "start" };
   }
 }
 
