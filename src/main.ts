@@ -6,6 +6,9 @@ declare global {
   }
 }
 
+const FPS = 10;
+const FRAME_DELAY = Math.floor(1000 / FPS);
+
 interface Frame {
   readonly imageData: ImageData;
   readonly timestamp: number;
@@ -251,9 +254,6 @@ class IdleView implements m.ClassComponent<ViewAttrs> {
 }
 
 class RecordView implements m.ClassComponent<ViewAttrs> {
-  static readonly FPS = 10;
-  static readonly FRAME_DELAY = Math.floor(1000 / RecordView.FPS);
-
   private app: App;
   private recording: Recording;
   private startTime: number | undefined;
@@ -316,8 +316,7 @@ class RecordView implements m.ClassComponent<ViewAttrs> {
       track.removeEventListener("ended", endedListener);
       track.stop();
 
-      this.recording.duration =
-        this.recording.frames![this.recording.frames!.length - 1].timestamp + RecordView.FRAME_DELAY;
+      this.recording.duration = this.recording.frames![this.recording.frames!.length - 1].timestamp + FRAME_DELAY;
     };
 
     m.redraw();
