@@ -1,4 +1,9 @@
 import m from "mithril";
+import { App, Frame, Gif, Recording, Rect, RenderOptions } from "./app";
+import Button from "./components/button";
+import Timer from "./components/timer";
+import View from "./components/view";
+import StartView from "./views/start";
 
 declare global {
   interface MediaDevices {
@@ -22,38 +27,6 @@ declare class GifEncoder {
 
 const FPS = 10;
 const FRAME_DELAY = Math.floor(1000 / FPS);
-
-interface Frame {
-  readonly imageData: ImageData;
-  readonly timestamp: number;
-}
-
-interface Recording {
-  readonly width: number;
-  readonly height: number;
-  readonly frames: Frame[];
-}
-
-interface Gif {
-  readonly blob: Blob;
-  readonly url: string;
-  readonly duration: number;
-  readonly size: number;
-}
-
-interface RenderOptions {
-  readonly trim: Range;
-  readonly crop: Rect;
-}
-
-function timediff(millis: number): string {
-  const abs = Math.floor(millis / 1000);
-  const mins = Math.floor(abs / 60);
-  const secs = abs % 60;
-  const s = `${secs < 10 ? "0" : ""}${secs}`;
-  const m = mins > 0 ? `${mins < 10 ? "0" : ""}${mins}` : "00";
-  return `${m}:${s}`;
-}
 
 function humanSize(size: number): string {
   if (size < 1024) {
@@ -85,132 +58,8 @@ function getFrameIndex(frames: Frame[], timestamp: number, start = 0, end = fram
     : getFrameIndex(frames, timestamp, mid, end);
 }
 
-interface ButtonAttrs {
-  readonly a?: any;
-  readonly primary?: boolean;
-  readonly title?: string;
-  readonly label?: string;
-  readonly outline?: boolean;
-  readonly iconset?: string;
-  readonly disabled?: boolean;
-  readonly icon: string;
-  readonly onclick?: Function;
-}
-
-const Button: m.Component<ButtonAttrs> = {
-  view(vnode) {
-    if (vnode.attrs.a) {
-      return m(
-        "a",
-        {
-          class: `button ${vnode.attrs.primary ? "primary" : "secondary"} ${vnode.attrs.label ? "" : "icon-only"} ${
-            vnode.attrs.outline ? "outline" : ""
-          }`,
-          ...vnode.attrs.a,
-        },
-        [
-          m("img", {
-            src: `https://icongr.am/${vnode.attrs.iconset || "octicons"}/${vnode.attrs.icon}.svg?size=16&color=${
-              vnode.attrs.outline ? "333333" : "ffffff"
-            }`,
-          }),
-          vnode.attrs.label,
-        ]
-      );
-    } else {
-      return m(
-        "button",
-        {
-          class: `button ${vnode.attrs.primary ? "primary" : "secondary"} ${vnode.attrs.label ? "" : "icon-only"} ${
-            vnode.attrs.outline ? "outline" : ""
-          }`,
-          onclick: vnode.attrs.onclick,
-          title: vnode.attrs.title || vnode.attrs.label,
-          disabled: vnode.attrs.disabled,
-        },
-        [
-          m("img", {
-            src: `https://icongr.am/${vnode.attrs.iconset || "octicons"}/${vnode.attrs.icon}.svg?size=16&color=${
-              vnode.attrs.outline ? "333333" : "ffffff"
-            }`,
-          }),
-          vnode.attrs.label,
-        ]
-      );
-    }
-  },
-};
-
-interface TimerAttrs {
-  readonly duration: number;
-}
-
-const Timer: m.Component<TimerAttrs> = {
-  view(vnode) {
-    return m("span.tag.is-small", [
-      m("img", {
-        src: "https://icongr.am/octicons/clock.svg?size=16&color=333333",
-      }),
-      timediff(vnode.attrs.duration),
-    ]);
-  },
-};
-
-interface DOMViewAttrs {
-  readonly contentClass?: string;
-  readonly contentProps?: object;
-  readonly actions: m.Children;
-}
-
-const DOMView: m.Component<DOMViewAttrs> = {
-  view(vnode) {
-    return m("section", { class: "view" }, [
-      m(
-        "section",
-        {
-          class: `content ${vnode.attrs.contentClass || ""}`,
-          ...(vnode.attrs.contentProps || {}),
-        },
-        vnode.children
-      ),
-      m("section", { class: "actions" }, vnode.attrs.actions),
-    ]);
-  },
-};
-
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-interface ViewAttrs {
+interface PlayViewAttrs {
   readonly app: App;
-}
-
-interface StartViewAttrs extends ViewAttrs {}
-
-class StartView implements m.ClassComponent<StartViewAttrs> {
-  private readonly app: App;
-
-  constructor(vnode: m.CVnode<StartViewAttrs>) {
-    this.app = vnode.attrs.app;
-  }
-
-  view() {
-    return m(DOMView, [
-      m("p", "Create animated GIFs from a screen recording."),
-      m("p", "Client-side only, no data is uploaded. Modern browser required."),
-      isMobile ? m("p", "Sorry, mobile does not support screen recording.") : undefined,
-      isMobile
-        ? undefined
-        : m(Button, {
-            label: "Start Recording",
-            icon: "play",
-            onclick: () => this.app.startRecording(),
-            primary: true,
-          }),
-    ]);
-  }
-}
-
-interface PlayViewAttrs extends ViewAttrs {
   readonly gif: Gif;
 }
 
@@ -249,7 +98,7 @@ class PlayView implements m.ClassComponent<PlayViewAttrs> {
 
     return [
       m(
-        DOMView,
+        View,
         { actions },
         m(".recording-card", [
           m(
@@ -286,7 +135,8 @@ class PlayView implements m.ClassComponent<PlayViewAttrs> {
   }
 }
 
-interface RecordViewAttrs extends ViewAttrs {
+interface RecordViewAttrs {
+  readonly app: App;
   readonly captureStream: MediaStream;
 }
 
@@ -363,7 +213,7 @@ class RecordView implements m.ClassComponent<RecordViewAttrs> {
 
   view() {
     return [
-      m(DOMView, [
+      m(View, [
         m("p", [
           m(Timer, {
             duration: this.startTime === 0 ? 0 : Date.now() - this.startTime,
@@ -389,13 +239,6 @@ class RecordView implements m.ClassComponent<RecordViewAttrs> {
   }
 }
 
-interface Rect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
 interface Viewport extends Rect {
   zoom: number;
 }
@@ -414,7 +257,8 @@ interface Range {
   end: number;
 }
 
-interface PreviewViewAttrs extends ViewAttrs {
+interface PreviewViewAttrs {
+  readonly app: App;
   readonly recording: Recording;
 }
 
@@ -545,7 +389,7 @@ class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
 
     return [
       m(
-        DOMView,
+        View,
         {
           actions,
           contentClass: "crop",
@@ -790,7 +634,8 @@ class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   }
 }
 
-interface RenderViewAttrs extends ViewAttrs {
+interface RenderViewAttrs {
+  readonly app: App;
   readonly recording: Recording;
   readonly renderOptions: RenderOptions;
 }
@@ -870,7 +715,7 @@ class RenderView implements m.ClassComponent<RenderViewAttrs> {
     ];
 
     return [
-      m(DOMView, { actions }, [
+      m(View, { actions }, [
         m(
           "progress",
           { max: "1", value: this.progress, title: "Rendering..." },
@@ -902,7 +747,7 @@ function assertState<T extends State["name"], E extends T>(actual: T, expected: 
   }
 }
 
-class App {
+class Main implements App {
   private _state: State = { name: "start" };
 
   private get state(): State {
@@ -1036,7 +881,7 @@ class App {
 }
 
 function main() {
-  m.mount(document.getElementById("app-container")!, App);
+  m.mount(document.getElementById("app-container")!, Main);
 }
 
 main();
