@@ -5,7 +5,9 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "target": "ES6",
-    "rootDir": "src"
+    "rootDir": "src",
+    "noUnusedLocals": true
   },
+  "include": ["src", "encoder/*.d.ts"],
   "exclude": ["node_modules"]
 }

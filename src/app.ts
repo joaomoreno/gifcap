@@ -42,3 +42,24 @@ export interface App {
   editGif(): void;
   discardGif(): void;
 }
+
+export function getFrameIndex(frames: Frame[], timestamp: number, start = 0, end = frames.length - 1): number {
+  const gap = end - start;
+
+  if (gap === 0) {
+    return start;
+  } else if (gap === 1) {
+    return timestamp < frames[end].timestamp ? start : end;
+  }
+
+  const mid = Math.floor((end + start) / 2);
+  const midTimestamp = frames[mid].timestamp;
+
+  if (timestamp === midTimestamp) {
+    return mid;
+  }
+
+  return timestamp < midTimestamp
+    ? getFrameIndex(frames, timestamp, start, mid)
+    : getFrameIndex(frames, timestamp, mid, end);
+}
