@@ -1,5 +1,5 @@
 import m from "mithril";
-import { App, Gif } from "../app";
+import { App, Gif } from "../gifcap";
 import Button from "../components/button";
 import Timer from "../components/timer";
 import View from "../components/view";

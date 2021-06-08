@@ -1,5 +1,5 @@
 import m from "mithril";
-import { App, getFrameIndex, Recording, RenderOptions } from "../app";
+import { App, Recording, RenderOptions } from "../gifcap";
 import Button from "../components/button";
 import View from "../components/view";
 
@@ -36,19 +36,20 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
 
     gif.once("finished", (blob) => {
       const url = URL.createObjectURL(blob);
-      const duration = this.renderOptions.trim.end - this.renderOptions.trim.start;
 
+      console.log(duration);
       this.app.finishRendering({ blob, url, duration, size: blob.size });
     });
 
     const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d")!;
 
-    // TODO@joao, these should already have been computed for us
-    const start = getFrameIndex(this.recording.frames, this.renderOptions.trim.start);
-    const end = getFrameIndex(this.recording.frames, this.renderOptions.trim.end);
+    const duration =
+      this.recording.frames[this.renderOptions.trim.end].timestamp -
+      this.recording.frames[this.renderOptions.trim.start].timestamp +
+      100;
 
     const processFrame = (index: number) => {
-      if (index > end) {
+      if (index > this.renderOptions.trim.end) {
         this._onbeforeremove = () => gif.abort();
         gif.render();
         return;
@@ -68,12 +69,13 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
         this.renderOptions.crop.height
       );
 
-      const delay = index < end ? this.recording.frames[index + 1].timestamp - frame.timestamp : 100;
+      const delay =
+        index < this.renderOptions.trim.end ? this.recording.frames[index + 1].timestamp - frame.timestamp : 100;
       gif.addFrame(imageData, delay);
       setTimeout(() => processFrame(index + 1), 0);
     };
 
-    processFrame(start);
+    processFrame(this.renderOptions.trim.start);
   }
 
   view() {

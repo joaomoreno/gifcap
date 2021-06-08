@@ -1,5 +1,5 @@
 import m from "mithril";
-import { App, Gif, Recording, RenderOptions } from "./app";
+import { App, Gif, Recording, RenderOptions } from "./gifcap";
 import PlayView from "./views/play";
 import PreviewView from "./views/preview";
 import RecordView from "./views/record";

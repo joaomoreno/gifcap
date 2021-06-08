@@ -1,5 +1,5 @@
 import m from "mithril";
-import { App, getFrameIndex, Recording, Rect } from "../app";
+import { App, Frame, Recording, Rect } from "../gifcap";
 import Button from "../components/button";
 import View from "../components/view";
 
@@ -19,6 +19,27 @@ interface Playback {
 interface Range {
   start: number;
   end: number;
+}
+
+export function getFrameIndex(frames: Frame[], timestamp: number, start = 0, end = frames.length - 1): number {
+  const gap = end - start;
+
+  if (gap === 0) {
+    return start;
+  } else if (gap === 1) {
+    return timestamp < frames[end].timestamp ? start : end;
+  }
+
+  const mid = Math.floor((end + start) / 2);
+  const midTimestamp = frames[mid].timestamp;
+
+  if (timestamp === midTimestamp) {
+    return mid;
+  }
+
+  return timestamp < midTimestamp
+    ? getFrameIndex(frames, timestamp, start, mid)
+    : getFrameIndex(frames, timestamp, mid, end);
 }
 
 const FPS = 10;
@@ -85,8 +106,11 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   }
 
   updateViewport() {
-    this.viewport.width = Math.floor(this.content.clientWidth);
-    this.viewport.height = Math.floor(this.content.clientHeight);
+    this.viewport = {
+      ...this.viewport,
+      width: Math.floor(this.content.clientWidth),
+      height: Math.floor(this.content.clientHeight),
+    };
   }
 
   onbeforeremove() {
@@ -138,7 +162,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       m(Button, {
         label: "Render",
         icon: "gear",
-        onclick: () => this.app.startRendering({ trim: this.trim, crop: this.crop }),
+        onclick: () => this.startRendering(),
         primary: true,
       }),
       m(Button, {
@@ -323,8 +347,11 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     };
 
     const onMouseMove = (event: MouseEvent) => {
-      this.viewport.top = start.top + (event.screenY - start.screenY) / this.viewport.zoom;
-      this.viewport.left = start.left + (event.screenX - start.screenX) / this.viewport.zoom;
+      this.viewport = {
+        ...this.viewport,
+        top: start.top + (event.screenY - start.screenY) / this.viewport.zoom,
+        left: start.left + (event.screenX - start.screenX) / this.viewport.zoom,
+      };
       m.redraw();
     };
 
@@ -398,5 +425,15 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     } else {
       this.play();
     }
+  }
+
+  private startRendering(): void {
+    this.app.startRendering({
+      trim: {
+        start: getFrameIndex(this.recording.frames, this.trim.start),
+        end: getFrameIndex(this.recording.frames, this.trim.end),
+      },
+      crop: this.crop,
+    });
   }
 }
