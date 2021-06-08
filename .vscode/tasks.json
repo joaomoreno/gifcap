@@ -4,10 +4,38 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build",
+      "label": "Typecheck",
       "type": "npm",
-      "script": "dev",
+      "script": "watch:typecheck",
       "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "group": "build"
+      }
+    },
+    {
+      "label": "ESBuild",
+      "type": "npm",
+      "script": "watch:dist",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "group": "build"
+      }
+    },
+    {
+      "label": "Serve",
+      "type": "npm",
+      "script": "serve",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "group": "build"
+      }
+    },
+    {
+      "label": "Build",
+      "dependsOn": ["Typecheck", "ESBuild", "Serve"],
       "group": {
         "kind": "build",
         "isDefault": true
