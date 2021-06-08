@@ -42,9 +42,6 @@ export function getFrameIndex(frames: Frame[], timestamp: number, start = 0, end
     : getFrameIndex(frames, timestamp, mid, end);
 }
 
-const FPS = 10;
-const FRAME_DELAY = Math.floor(1000 / FPS);
-
 interface PreviewViewAttrs {
   readonly app: App;
   readonly recording: Recording;
@@ -68,7 +65,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   constructor(vnode: m.CVnode<PreviewViewAttrs>) {
     this.app = vnode.attrs.app;
     this.recording = vnode.attrs.recording;
-    this.duration = this.recording.frames[this.recording.frames.length - 1].timestamp + FRAME_DELAY;
+    this.duration = this.recording.frames[this.recording.frames.length - 1].timestamp + this.app.frameLength;
     this.viewport = { width: 0, height: 0, top: 0, left: 0, zoom: 1 };
     this.playback = { head: 0, start: 0, offset: 0, end: this.duration, disposable: undefined };
     this.trim = { start: 0, end: this.duration };
@@ -238,8 +235,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       width: this.playbar.clientWidth,
       screenX: event.screenX,
       head: handle === "start" ? this.trim.start : this.trim.end,
-      min: handle === "start" ? 0 : this.trim.start + FRAME_DELAY,
-      max: handle === "start" ? this.trim.end - FRAME_DELAY : this.duration,
+      min: handle === "start" ? 0 : this.trim.start + this.app.frameLength,
+      max: handle === "start" ? this.trim.end - this.app.frameLength : this.duration,
     };
 
     const onMouseMove = (e: MouseEvent) => {

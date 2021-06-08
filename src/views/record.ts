@@ -33,6 +33,7 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
     const ctx = canvas.getContext("2d")!;
 
     const worker = new Worker("/dist/ticker.js");
+    worker.postMessage(this.app.frameLength);
     worker.onmessage = () => {
       if (video.videoWidth === 0) {
         return;
@@ -60,7 +61,7 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
       });
     };
 
-    const redrawInterval = setInterval(() => m.redraw(), 100);
+    const redrawInterval = setInterval(() => m.redraw(), this.app.frameLength);
 
     const track = this.captureStream.getVideoTracks()[0];
     const endedListener = () => this.stopRecording();

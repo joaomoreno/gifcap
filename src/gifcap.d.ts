@@ -34,6 +34,7 @@ export interface Gif {
 }
 
 export interface App {
+  readonly frameLength: number;
   startRecording(): void;
   stopRecording(recording: Recording): void;
   startRendering(renderOptions: RenderOptions): void;

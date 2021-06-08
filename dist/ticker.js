@@ -1,1 +1,1 @@
-setInterval(() => postMessage(null), 100);
+self.onmessage = e => setInterval(() => postMessage(null), e.data)

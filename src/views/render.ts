@@ -36,17 +36,15 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
 
     gif.once("finished", (blob) => {
       const url = URL.createObjectURL(blob);
+      const duration =
+        this.recording.frames[this.renderOptions.trim.end].timestamp -
+        this.recording.frames[this.renderOptions.trim.start].timestamp +
+        this.app.frameLength;
 
-      console.log(duration);
       this.app.finishRendering({ blob, url, duration, size: blob.size });
     });
 
     const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d")!;
-
-    const duration =
-      this.recording.frames[this.renderOptions.trim.end].timestamp -
-      this.recording.frames[this.renderOptions.trim.start].timestamp +
-      100;
 
     const processFrame = (index: number) => {
       if (index > this.renderOptions.trim.end) {
@@ -70,7 +68,9 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
       );
 
       const delay =
-        index < this.renderOptions.trim.end ? this.recording.frames[index + 1].timestamp - frame.timestamp : 100;
+        index < this.renderOptions.trim.end
+          ? this.recording.frames[index + 1].timestamp - frame.timestamp
+          : this.app.frameLength;
       gif.addFrame(imageData, delay);
       setTimeout(() => processFrame(index + 1), 0);
     };

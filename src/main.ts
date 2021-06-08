@@ -12,6 +12,8 @@ declare global {
   }
 }
 
+const FPS = 12;
+
 type State =
   | { name: "start" }
   | { name: "playing"; gif: Gif; recording: Recording }
@@ -26,6 +28,8 @@ function assertState<T extends State["name"], E extends T>(actual: T, expected: 
 }
 
 class Main implements App {
+  readonly frameLength = Math.floor(1000 / FPS);
+
   private _state: State = { name: "start" };
 
   private get state(): State {
