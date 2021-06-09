@@ -1,24 +1,18 @@
 import m from "mithril";
-import { App, Frame, Recording, Rect } from "../gifcap";
+import { App, Frame, Recording, Rect, Range } from "../gifcap";
 import Button from "../components/button";
 import View from "../components/view";
 
 interface Viewport extends Rect {
-  zoom: number;
+  readonly zoom: number;
 }
 
-// TODO: cleanup
 interface Playback {
   head: number;
   start: number;
   end: number;
   offset: number;
-  disposable: Function | undefined;
-}
-
-interface Range {
-  start: number;
-  end: number;
+  disposable: Function;
 }
 
 export function getFrameIndex(frames: Frame[], timestamp: number, start = 0, end = frames.length - 1): number {
@@ -41,6 +35,8 @@ export function getFrameIndex(frames: Frame[], timestamp: number, start = 0, end
     ? getFrameIndex(frames, timestamp, start, mid)
     : getFrameIndex(frames, timestamp, mid, end);
 }
+
+const noop = () => null;
 
 interface PreviewViewAttrs {
   readonly app: App;
@@ -67,13 +63,13 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     this.recording = vnode.attrs.recording;
     this.duration = this.recording.frames[this.recording.frames.length - 1].timestamp + this.app.frameLength;
     this.viewport = { width: 0, height: 0, top: 0, left: 0, zoom: 1 };
-    this.playback = { head: 0, start: 0, offset: 0, end: this.duration, disposable: undefined };
+    this.playback = { head: 0, start: 0, offset: 0, end: this.duration, disposable: noop };
     this.trim = { start: 0, end: this.duration };
     this.crop = { top: 0, left: 0, width: this.recording.width, height: this.recording.height };
   }
 
   private get isPlaying() {
-    return !!this.playback.disposable;
+    return this.playback.disposable !== noop;
   }
 
   async oncreate(vnode: m.VnodeDOM<PreviewViewAttrs, this>) {
@@ -92,7 +88,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   }
 
   zoomToFit() {
-    this.viewport.zoom = Math.max(
+    const zoom = Math.max(
       0.1,
       Math.min(
         1,
@@ -100,6 +96,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
         (this.viewport.height * 0.95) / this.recording.height
       )
     );
+
+    this.viewport = { ...this.viewport, zoom };
   }
 
   updateViewport() {
@@ -242,7 +240,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     const onMouseMove = (e: MouseEvent) => {
       const diff = e.screenX - start.screenX;
       const head = start.head + Math.round((diff * this.duration) / start.width);
-      this.trim[handle] = Math.max(start.min, Math.min(start.max, head));
+      this.trim = { ...this.trim, [handle]: Math.max(start.min, Math.min(start.max, head)) };
 
       m.redraw();
     };
@@ -271,8 +269,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
 
   onContentWheel(event: WheelEvent) {
     event.preventDefault();
-    const zoom = this.viewport.zoom - (event.deltaY / 180) * 0.1;
-    this.viewport.zoom = Math.max(0.1, Math.min(2, zoom));
+    const zoom = Math.max(0.1, Math.min(2, this.viewport.zoom - (event.deltaY / 180) * 0.1));
+    this.viewport = { ...this.viewport, zoom };
   }
 
   onContentMouseDown(event: MouseEvent) {
@@ -373,9 +371,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   }
 
   play() {
-    if (this.playback.disposable) {
-      this.playback.disposable();
-    }
+    this.playback.disposable();
 
     const ctx = this.canvas.getContext("2d")!;
 
@@ -401,19 +397,12 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     };
 
     animationFrame = requestAnimationFrame(draw);
-
-    this.playback.disposable = () => {
-      if (typeof animationFrame !== "undefined") {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
+    this.playback.disposable = () => cancelAnimationFrame(animationFrame!);
   }
 
   pause() {
-    if (this.playback.disposable) {
-      this.playback.disposable();
-      this.playback.disposable = undefined;
-    }
+    this.playback.disposable();
+    this.playback.disposable = noop;
   }
 
   togglePlayPause() {
