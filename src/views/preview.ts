@@ -1,5 +1,5 @@
 import m from "mithril";
-import { App, Frame, Recording, Rect, Range } from "../gifcap";
+import { App, Frame, Recording, Rect, Range, RenderOptions } from "../gifcap";
 import Button from "../components/button";
 import View from "../components/view";
 
@@ -41,6 +41,7 @@ const noop = () => null;
 interface PreviewViewAttrs {
   readonly app: App;
   readonly recording: Recording;
+  readonly renderOptions?: RenderOptions;
 }
 
 export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
@@ -63,9 +64,20 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     this.recording = vnode.attrs.recording;
     this.duration = this.recording.frames[this.recording.frames.length - 1].timestamp + this.app.frameLength;
     this.viewport = { width: 0, height: 0, top: 0, left: 0, zoom: 1 };
-    this.playback = { head: 0, start: 0, offset: 0, end: this.duration, disposable: noop };
-    this.trim = { start: 0, end: this.duration };
-    this.crop = { top: 0, left: 0, width: this.recording.width, height: this.recording.height };
+    const trimStart = vnode.attrs.renderOptions
+      ? this.recording.frames[vnode.attrs.renderOptions.trim.start].timestamp
+      : 0;
+    const trimEnd = vnode.attrs.renderOptions
+      ? this.recording.frames[vnode.attrs.renderOptions.trim.end].timestamp
+      : this.duration;
+    this.playback = { head: trimStart, start: trimStart, offset: 0, end: trimEnd, disposable: noop };
+    this.trim = { start: trimStart, end: trimEnd };
+    this.crop = vnode.attrs.renderOptions?.crop ?? {
+      top: 0,
+      left: 0,
+      width: this.recording.width,
+      height: this.recording.height,
+    };
   }
 
   private get isPlaying() {
