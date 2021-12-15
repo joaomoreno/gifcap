@@ -321,8 +321,6 @@ class PreviewView {
   onTrimMouseDown(handle, event) {
     event.preventDefault();
 
-    this.pause();
-
     const ctx = this.canvas.getContext('2d');
     const start = {
       width: this.playbar.clientWidth,
@@ -352,6 +350,7 @@ class PreviewView {
       m.redraw();
     };
 
+    this.pause();
     document.body.addEventListener('mousemove', onMouseMove);
     document.body.addEventListener('mouseup', onMouseUp);
   }
