@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2017", "DOM"],
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "target": "ES6",
+    "rootDir": "src",
+    "noUnusedLocals": true
+  },
+  "include": ["src", "encoder/*.d.ts"],
+  "exclude": ["node_modules"]
+}

@@ -8,7 +8,7 @@ let encoder;
 
 function process() {
   if (!encoder) {
-    if (!initialized) {
+    if (!initialized || !opts) {
       return;
     }
 
