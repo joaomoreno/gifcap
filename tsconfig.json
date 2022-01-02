@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "noEmit": true,
-    "lib": ["ES2015", "DOM"],
+    "lib": ["ES2017", "DOM"],
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "target": "ES6",
