@@ -10,15 +10,15 @@ export interface Recording {
 }
 
 export interface Rect {
-  readonly top: number;
-  readonly left: number;
-  readonly width: number;
-  readonly height: number;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
 }
 
 export interface Range {
-  readonly start: number;
-  readonly end: number;
+  start: number;
+  end: number;
 }
 
 export interface RenderOptions {

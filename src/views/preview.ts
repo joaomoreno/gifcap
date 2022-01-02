@@ -4,7 +4,12 @@ import Button from "../components/button";
 import View from "../components/view";
 
 interface Viewport extends Rect {
-  readonly zoom: number;
+  scale: number;
+}
+
+interface Point {
+  x: number;
+  y: number;
 }
 
 interface Playback {
@@ -37,6 +42,7 @@ export function getFrameIndex(frames: Frame[], timestamp: number, start = 0, end
 }
 
 const noop = () => null;
+const dpr = window.devicePixelRatio || 1;
 
 interface PreviewViewAttrs {
   readonly app: App;
@@ -48,21 +54,33 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   private readonly recording: Recording;
   private readonly duration: number;
 
+  private sourceCanvas!: HTMLCanvasElement;
+  private sourceCtx!: CanvasRenderingContext2D;
   private canvas!: HTMLCanvasElement;
+  private ctx!: CanvasRenderingContext2D;
+  private matrix!: DOMMatrix;
+
   private playbar!: HTMLDivElement;
   private content!: HTMLDivElement;
   private viewportDisposable!: Function;
 
+  private mouse: Point;
   private viewport: Viewport;
+  private initialScale!: number;
   private playback: Playback;
   private trim: Range;
   private crop: Rect;
+
+  private didDraw = false;
+  private didResize = false;
 
   constructor(vnode: m.CVnode<PreviewViewAttrs>) {
     this.app = vnode.attrs.app;
     this.recording = vnode.attrs.recording;
     this.duration = this.recording.frames[this.recording.frames.length - 1].timestamp + this.app.frameLength;
-    this.viewport = { width: 0, height: 0, top: 0, left: 0, zoom: 1 };
+
+    this.mouse = { x: 0, y: 0 };
+    this.viewport = { width: 0, height: 0, top: 0, left: 0, scale: 1 };
     this.playback = { head: 0, start: 0, offset: 0, end: this.duration, disposable: noop };
     this.trim = { start: 0, end: this.duration };
     this.crop = { top: 0, left: 0, width: this.recording.width, height: this.recording.height };
@@ -73,39 +91,45 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   }
 
   async oncreate(vnode: m.VnodeDOM<PreviewViewAttrs, this>) {
-    this.canvas = vnode.dom.getElementsByTagName("canvas")[0];
+    this.sourceCanvas = vnode.dom.querySelector("canvas.source")!;
+    this.sourceCtx = this.sourceCanvas.getContext("2d")!;
+    this.canvas = vnode.dom.querySelector("canvas.target")!;
+    this.ctx = this.canvas.getContext("2d")!;
+    this.matrix = this.ctx.getTransform();
     this.playbar = vnode.dom.querySelector(".playbar")!;
     this.content = vnode.dom.querySelector(".content")!;
 
-    const viewportListener = () => this.updateViewport();
+    const viewportListener = () => this.onDidResize();
     window.addEventListener("resize", viewportListener);
     this.viewportDisposable = () => window.removeEventListener("resize", viewportListener);
-    this.updateViewport();
+    this.onDidResize();
     this.zoomToFit();
 
-    m.redraw(); // prevent flickering
     setTimeout(() => this.play());
   }
 
-  zoomToFit() {
-    const zoom = Math.max(
+  private zoomToFit() {
+    this.viewport.top = (this.recording.height - this.viewport.height * dpr) / -2;
+    this.viewport.left = (this.recording.width - this.viewport.width * dpr) / -2;
+    this.initialScale = Math.max(
       0.1,
       Math.min(
         1,
-        (this.viewport.width * 0.95) / this.recording.width,
-        (this.viewport.height * 0.95) / this.recording.height
+        (this.viewport.width * dpr * 0.95) / this.recording.width,
+        (this.viewport.height * dpr * 0.95) / this.recording.height
       )
     );
-
-    this.viewport = { ...this.viewport, zoom };
   }
 
-  updateViewport() {
-    this.viewport = {
-      ...this.viewport,
-      width: Math.floor(this.content.clientWidth),
-      height: Math.floor(this.content.clientHeight),
-    };
+  private onDidResize() {
+    const width = Math.floor(this.content.clientWidth);
+    const height = Math.floor(this.content.clientHeight);
+    this.viewport.left += Math.round((width - this.viewport.width) / this.viewport.scale / 2);
+    this.viewport.top += Math.round((height - this.viewport.height) / this.viewport.scale / 2);
+    this.viewport.width = width;
+    this.viewport.height = height;
+    this.didResize = true;
+    m.redraw();
   }
 
   onbeforeremove() {
@@ -114,11 +138,6 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   }
 
   view() {
-    const isCropped =
-      this.crop.top !== 0 ||
-      this.crop.left !== 0 ||
-      this.crop.width !== this.recording.width ||
-      this.crop.height !== this.recording.height;
     const actions = [
       m(Button, {
         title: this.isPlaying ? "Pause" : "Play",
@@ -167,12 +186,6 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       }),
     ];
 
-    const scale = (value: number) => value * this.viewport.zoom;
-    const width = scale(this.recording.width);
-    const height = scale(this.recording.height);
-    const top = Math.floor(scale(this.viewport.top) + this.viewport.height / 2 - height / 2);
-    const left = Math.floor(scale(this.viewport.left) + this.viewport.width / 2 - width / 2);
-
     return [
       m(
         View,
@@ -180,46 +193,23 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
           actions,
           contentClass: "crop",
           contentProps: {
-            onwheel: (e: WheelEvent) => this.onContentWheel(e),
-            onmousedown: (e: MouseEvent) => this.onContentMouseDown(e),
+            onmousemove: (e: MouseEvent) => this.onMouseMove(e),
+            onmousedown: (e: MouseEvent) => this.onMouseDown(e),
             oncontextmenu: (e: MouseEvent) => e.preventDefault(),
           },
         },
         [
-          m(
-            ".preview",
-            {
-              style: {
-                top: `${top}px`,
-                left: `${left}px`,
-                width: `${width}px`,
-                height: `${height}px`,
-              },
-            },
-            [
-              m("canvas", {
-                width: this.recording.width,
-                height: this.recording.height,
-              }),
-              isCropped &&
-                m(".crop-box", {
-                  style: {
-                    // here be dragons!
-                    clipPath: `polygon(evenodd, 0 0, 0 ${scale(this.recording.height)}px, ${scale(
-                      this.recording.width
-                    )}% ${scale(this.recording.height)}px, ${scale(this.recording.width)}% 0, 0 0, ${scale(
-                      this.crop.left
-                    )}px ${scale(this.crop.top)}px, ${scale(this.crop.left)}px ${scale(
-                      this.crop.top + this.crop.height
-                    )}px, ${scale(this.crop.left + this.crop.width)}px ${scale(
-                      this.crop.top + this.crop.height
-                    )}px, ${scale(this.crop.left + this.crop.width)}px ${scale(this.crop.top)}px, ${scale(
-                      this.crop.left
-                    )}px ${scale(this.crop.top)}px)`,
-                  },
-                }),
-            ]
-          ),
+          m("canvas", {
+            class: "source",
+            width: this.recording.width,
+            height: this.recording.height,
+          }),
+          m("canvas", {
+            class: "target",
+            width: Math.floor(this.viewport.width * dpr),
+            height: Math.floor(this.viewport.height * dpr),
+            onwheel: (e: WheelEvent) => this.onContentWheel(e),
+          }),
         ]
       ),
     ];
@@ -228,7 +218,6 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   onTrimMouseDown(handle: "start" | "end", event: MouseEvent) {
     event.preventDefault();
 
-    const ctx = this.canvas.getContext("2d")!;
     const start = {
       width: this.playbar.clientWidth,
       screenX: event.screenX,
@@ -240,7 +229,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     const onMouseMove = (e: MouseEvent) => {
       const diff = e.screenX - start.screenX;
       const head = start.head + Math.round((diff * this.duration) / start.width);
-      this.trim = { ...this.trim, [handle]: Math.max(start.min, Math.min(start.max, head)) };
+      this.trim[handle] = Math.max(start.min, Math.min(start.max, head));
 
       m.redraw();
     };
@@ -257,7 +246,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
         this.playback.offset = Date.now() - this.playback.head + this.playback.start;
 
         const index = getFrameIndex(this.recording.frames, this.playback.head);
-        ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
+        this.ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
       }
 
       m.redraw();
@@ -269,44 +258,64 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
 
   onContentWheel(event: WheelEvent) {
     event.preventDefault();
-    const zoom = Math.max(0.1, Math.min(2, this.viewport.zoom - (event.deltaY / 180) * 0.1));
-    this.viewport = { ...this.viewport, zoom };
+
+    const scaleDelta = Math.pow(1.1, -event.deltaY / 90);
+    this.setScale(this.viewport.scale * scaleDelta, this.mouse);
+    this.drawFrame();
   }
 
-  onContentMouseDown(event: MouseEvent) {
-    if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      this.onCrop(event);
-    } else {
+  private setScale(
+    scale: number,
+    reference: Point = { x: this.viewport.width / 2, y: this.viewport.height / 2 }
+  ): void {
+    scale = Math.max(0.1, Math.min(2, scale));
+
+    const delta = scale / this.viewport.scale;
+    const M = this.matrix.inverse();
+    const mouse = M.transformPoint({ x: reference.x * dpr, y: reference.y * dpr });
+
+    this.ctx.translate(mouse.x, mouse.y);
+    this.ctx.scale(delta, delta);
+    this.ctx.translate(-mouse.x, -mouse.y);
+
+    this.matrix = this.ctx.getTransform();
+    this.viewport.scale = scale;
+  }
+
+  private onMouseMove(event: MouseEvent) {
+    this.mouse.x = event.clientX;
+    this.mouse.y = event.clientY;
+  }
+
+  private onMouseDown(event: MouseEvent) {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) {
       this.onViewportMove(event);
+    } else {
+      this.onCrop(event);
     }
   }
 
-  onCrop(event: MouseEvent) {
-    const width = this.recording.width * this.viewport.zoom;
-    const height = this.recording.height * this.viewport.zoom;
-    const top = Math.floor(this.viewport.top * this.viewport.zoom + this.viewport.height / 2 - height / 2);
-    const left = Math.floor(this.viewport.left * this.viewport.zoom + this.viewport.width / 2 - width / 2);
-    const offsetTop = (event.currentTarget as HTMLDivElement).offsetTop;
-    const offsetLeft = (event.currentTarget as HTMLDivElement).offsetLeft;
-    const mouseTop = (event: MouseEvent) =>
-      Math.max(0, Math.min(this.recording.height, (event.clientY - offsetTop - top) / this.viewport.zoom));
-    const mouseLeft = (event: MouseEvent) =>
-      Math.max(0, Math.min(this.recording.width, (event.clientX - offsetLeft - left) / this.viewport.zoom));
-    const point = (event: MouseEvent) => ({
-      top: Math.round(mouseTop(event)),
-      left: Math.round(mouseLeft(event)),
-    });
-    const from = point(event);
+  private onCrop(event: MouseEvent) {
+    const M = this.matrix.inverse();
+    const point = (event: MouseEvent) => {
+      const p = M.transformPoint({ x: event.clientX * dpr, y: event.clientY * dpr });
 
+      return {
+        x: Math.max(Math.min(Math.floor(p.x) - this.viewport.left, this.recording.width), 0),
+        y: Math.max(Math.min(Math.floor(p.y) - this.viewport.top, this.recording.height), 0),
+      };
+    };
+
+    const from = point(event);
     let didMove = false;
+
     const onMouseMove = (event: MouseEvent) => {
       const to = point(event);
-      const top = Math.max(0, Math.min(from.top, to.top));
-      const left = Math.max(0, Math.min(from.left, to.left));
-      const width = Math.min(this.recording.width - left, Math.abs(from.left - to.left));
-      const height = Math.min(this.recording.height - top, Math.abs(from.top - to.top));
+      this.crop.top = Math.max(0, Math.min(from.y, to.y));
+      this.crop.left = Math.max(0, Math.min(from.x, to.x));
+      this.crop.width = Math.min(this.recording.width - this.crop.left, Math.abs(from.x - to.x));
+      this.crop.height = Math.min(this.recording.height - this.crop.top, Math.abs(from.y - to.y));
 
-      this.crop = { top, left, width, height };
       didMove = true;
       m.redraw();
     };
@@ -317,12 +326,10 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       document.body.removeEventListener("mouseup", onMouseUp);
 
       if (!didMove || this.crop.width < 10 || this.crop.height < 10) {
-        this.crop = {
-          top: 0,
-          left: 0,
-          width: this.recording.width,
-          height: this.recording.height,
-        };
+        this.crop.top = 0;
+        this.crop.left = 0;
+        this.crop.width = this.recording.width;
+        this.crop.height = this.recording.height;
       }
 
       m.redraw();
@@ -333,20 +340,23 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     document.body.addEventListener("mouseup", onMouseUp);
   }
 
-  onViewportMove(event: MouseEvent) {
+  private onViewportMove(event: MouseEvent) {
+    const M = this.matrix.inverse();
+    const point = (event: MouseEvent) => {
+      const p = M.transformPoint({ x: event.clientX * dpr, y: event.clientY * dpr });
+      return { x: Math.floor(p.x), y: Math.floor(p.y) };
+    };
+
     const start = {
       top: this.viewport.top,
       left: this.viewport.left,
-      screenX: event.screenX,
-      screenY: event.screenY,
+      point: point(event),
     };
 
     const onMouseMove = (event: MouseEvent) => {
-      this.viewport = {
-        ...this.viewport,
-        top: start.top + (event.screenY - start.screenY) / this.viewport.zoom,
-        left: start.left + (event.screenX - start.screenX) / this.viewport.zoom,
-      };
+      const p = point(event);
+      this.viewport.top = start.top + p.y - start.point.y;
+      this.viewport.left = start.left + p.x - start.point.x;
       m.redraw();
     };
 
@@ -365,18 +375,14 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   onPlaybarInput(event: InputEvent) {
     this.playback.head = (event.target as HTMLInputElement).valueAsNumber;
 
-    const ctx = this.canvas.getContext("2d")!;
     const index = getFrameIndex(this.recording.frames, this.playback.head);
-    ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
+    this.ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
   }
 
   play() {
     this.playback.disposable();
 
-    const ctx = this.canvas.getContext("2d")!;
-
-    let lastIndex: number | undefined = undefined;
-    let animationFrame: number | undefined = undefined;
+    let handle: number | undefined = undefined;
 
     this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, this.playback.head));
     this.playback.offset = Date.now() - this.playback.head + this.playback.start;
@@ -385,19 +391,65 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       this.playback.head =
         this.playback.start + ((Date.now() - this.playback.offset) % (this.playback.end - this.playback.start));
 
-      const index = getFrameIndex(this.recording.frames, this.playback.head);
-
-      if (lastIndex !== index) {
-        ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
-      }
-
-      lastIndex = index;
       m.redraw();
-      animationFrame = requestAnimationFrame(draw);
+      handle = requestAnimationFrame(draw);
     };
 
-    animationFrame = requestAnimationFrame(draw);
-    this.playback.disposable = () => cancelAnimationFrame(animationFrame!);
+    handle = requestAnimationFrame(draw);
+    this.playback.disposable = () => cancelAnimationFrame(handle!);
+  }
+
+  onupdate(): void {
+    if (this.didResize) {
+      this.ctx.setTransform(this.matrix);
+      this.didResize = false;
+    }
+
+    this.drawFrame();
+  }
+
+  private drawFrame(): void {
+    if (!this.didDraw && this.initialScale !== 1) {
+      this.setScale(this.initialScale);
+    }
+
+    const index = getFrameIndex(this.recording.frames, this.playback.head);
+    this.sourceCtx.putImageData(this.recording.frames[index].imageData, 0, 0);
+
+    const transform = this.ctx.getTransform();
+    this.ctx.setTransform();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    this.ctx.setTransform(transform);
+    this.ctx.drawImage(this.sourceCanvas, this.viewport.left, this.viewport.top);
+
+    if (
+      this.crop.top !== 0 ||
+      this.crop.left !== 0 ||
+      this.crop.width !== this.recording.width ||
+      this.crop.height !== this.recording.height
+    ) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.viewport.left, this.viewport.top);
+      this.ctx.lineTo(this.viewport.left + this.recording.width, this.viewport.top);
+      this.ctx.lineTo(this.viewport.left + this.recording.width, this.viewport.top + this.recording.height);
+      this.ctx.lineTo(this.viewport.left, this.viewport.top + this.recording.height);
+      this.ctx.lineTo(this.viewport.left, this.viewport.top);
+      this.ctx.closePath();
+      this.ctx.moveTo(this.viewport.left + this.crop.left, this.viewport.top + this.crop.top);
+      this.ctx.lineTo(this.viewport.left + this.crop.left, this.viewport.top + this.crop.top + this.crop.height);
+      this.ctx.lineTo(
+        this.viewport.left + this.crop.left + this.crop.width,
+        this.viewport.top + this.crop.top + this.crop.height
+      );
+      this.ctx.lineTo(this.viewport.left + this.crop.left + this.crop.width, this.viewport.top + this.crop.top);
+      this.ctx.lineTo(this.viewport.left + this.crop.left, this.viewport.top + this.crop.top);
+      this.ctx.closePath();
+      this.ctx.fillStyle = "#00000055";
+      this.ctx.fill();
+    }
+
+    this.didDraw = true;
   }
 
   pause() {
