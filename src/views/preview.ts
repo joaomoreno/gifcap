@@ -268,7 +268,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     scale: number,
     reference: Point = { x: this.viewport.width / 2, y: this.viewport.height / 2 }
   ): void {
-    scale = Math.max(0.1, Math.min(2, scale));
+    scale = Math.max(0.2, Math.min(3, scale));
 
     const delta = scale / this.viewport.scale;
     const M = this.matrix.inverse();
