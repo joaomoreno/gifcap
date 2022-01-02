@@ -218,6 +218,10 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   onTrimMouseDown(handle: "start" | "end", event: MouseEvent) {
     event.preventDefault();
 
+    const wasPlaying = this.isPlaying;
+    const head = this.playback.head;
+    this.pause();
+
     const start = {
       width: this.playbar.clientWidth,
       screenX: event.screenX,
@@ -229,6 +233,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     const onMouseMove = (e: MouseEvent) => {
       const diff = e.screenX - start.screenX;
       const head = start.head + Math.round((diff * this.duration) / start.width);
+      this.playback.head = head;
       this.trim[handle] = Math.max(start.min, Math.min(start.max, head));
 
       m.redraw();
@@ -241,12 +246,11 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       this.playback.start = this.trim.start;
       this.playback.end = this.trim.end;
 
-      if (this.isPlaying) {
-        this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, this.playback.head));
-        this.playback.offset = Date.now() - this.playback.head + this.playback.start;
-
-        const index = getFrameIndex(this.recording.frames, this.playback.head);
-        this.ctx.putImageData(this.recording.frames[index].imageData, 0, 0);
+      if (wasPlaying) {
+        this.playback.head = this.trim.start;
+        this.play();
+      } else {
+        this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, head));
       }
 
       m.redraw();
