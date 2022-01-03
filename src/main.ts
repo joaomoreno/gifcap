@@ -16,9 +16,9 @@ const FPS = 12;
 
 type State =
   | { name: "start" }
-  | { name: "playing"; gif: Gif; recording: Recording }
+  | { name: "playing"; gif: Gif; recording: Recording; renderOptions: RenderOptions }
   | { name: "recording"; captureStream: MediaStream }
-  | { name: "previewing"; recording: Recording }
+  | { name: "previewing"; recording: Recording; renderOptions?: RenderOptions }
   | { name: "rendering"; recording: Recording; renderOptions: RenderOptions };
 
 function assertState<T extends State["name"], E extends T>(actual: T, expected: E): asserts actual is E {
@@ -106,7 +106,7 @@ class Main implements App {
       case "recording":
         return m(RecordView, { app: this, captureStream: this.state.captureStream });
       case "previewing":
-        return m(PreviewView, { app: this, recording: this.state.recording });
+        return m(PreviewView, { app: this, recording: this.state.recording, renderOptions: this.state.renderOptions });
       case "rendering":
         return m(RenderView, { app: this, recording: this.state.recording, renderOptions: this.state.renderOptions });
     }
@@ -144,17 +144,17 @@ class Main implements App {
 
   finishRendering(gif: Gif) {
     assertState(this.state.name, "rendering");
-    this.state = { name: "playing", gif, recording: this.state.recording };
+    this.state = { name: "playing", gif, recording: this.state.recording, renderOptions: this.state.renderOptions };
   }
 
   cancelRendering() {
     assertState(this.state.name, "rendering");
-    this.state = { name: "previewing", recording: this.state.recording };
+    this.state = { name: "previewing", recording: this.state.recording, renderOptions: this.state.renderOptions };
   }
 
   editGif() {
     assertState(this.state.name, "playing");
-    this.state = { name: "previewing", recording: this.state.recording };
+    this.state = { name: "previewing", recording: this.state.recording, renderOptions: this.state.renderOptions };
   }
 
   discardGif() {

@@ -32,7 +32,7 @@ function finish() {
     return;
   }
 
-  const cb = addFunctionWasm((ptr, length) => {
+  const cb = addFunction((ptr, length) => {
     const result = new Uint8Array(length);
     result.set(new Uint8Array(Module.HEAPU8.buffer, ptr, length));
     self.postMessage(result.buffer, { transfer: [result.buffer] });

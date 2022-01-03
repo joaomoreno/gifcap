@@ -14,7 +14,7 @@ function process(frame) {
     input.set(new Uint8Array(frame.buffer));
 
     const imageLength = frame.width * frame.height;
-    const cb = addFunctionWasm((palettePtr, paletteLength, imagePtr) => {
+    const cb = addFunction((palettePtr, paletteLength, imagePtr) => {
       const buffer = new ArrayBuffer(paletteLength + imageLength);
       const result = new Uint8Array(buffer);
       result.set(new Uint8Array(Module.HEAPU8.buffer, palettePtr, paletteLength));
