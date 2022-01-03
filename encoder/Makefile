@@ -4,6 +4,7 @@ CFLAGS=-O2 \
 	-s RESERVED_FUNCTION_POINTERS=20 \
 	-s ALLOW_TABLE_GROWTH=1 \
 	-s EXPORTED_FUNCTIONS=['_malloc','_free'] \
+	-s EXPORTED_RUNTIME_METHODS=['addFunction'] \
 	-Ivendor/libimagequant \
 	-Ivendor/gifsicle/src \
 	-Ivendor/gifsicle/include
