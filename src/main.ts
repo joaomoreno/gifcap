@@ -113,13 +113,6 @@ class Main implements App {
   }
 
   async startRecording() {
-    if (
-      this.state.name !== "start" &&
-      !window.confirm("This will discard the current recording, are you sure you want to continue?")
-    ) {
-      return;
-    }
-
     try {
       const captureStream = await navigator.mediaDevices.getDisplayMedia({
         video: { width: 9999, height: 9999 },
@@ -158,6 +151,10 @@ class Main implements App {
   }
 
   discardGif() {
+    if (!window.confirm("This will discard the current recording, are you sure you want to continue?")) {
+      return;
+    }
+
     this.state = { name: "start" };
   }
 }
