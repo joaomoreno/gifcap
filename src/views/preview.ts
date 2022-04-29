@@ -328,10 +328,10 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
 
     const onMouseMove = (event: MouseEvent) => {
       const to = point(event);
-      this.crop.top = Math.max(0, Math.min(from.y, to.y));
-      this.crop.left = Math.max(0, Math.min(from.x, to.x));
-      this.crop.width = Math.min(this.recording.width - this.crop.left, Math.abs(from.x - to.x));
-      this.crop.height = Math.min(this.recording.height - this.crop.top, Math.abs(from.y - to.y));
+      this.crop.top = Math.floor(Math.max(0, Math.min(from.y, to.y)));
+      this.crop.left = Math.floor(Math.max(0, Math.min(from.x, to.x)));
+      this.crop.width = Math.floor(Math.min(this.recording.width - this.crop.left, Math.abs(from.x - to.x)));
+      this.crop.height = Math.floor(Math.min(this.recording.height - this.crop.top, Math.abs(from.y - to.y)));
 
       didMove = true;
       m.redraw();
