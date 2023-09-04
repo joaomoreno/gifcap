@@ -1,4 +1,4 @@
-# gifcap
+# gifcap (test)
 
 [![Build](https://github.com/joaomoreno/gifcap/actions/workflows/build.yml/badge.svg)](https://github.com/joaomoreno/gifcap/actions/workflows/build.yml)
 
