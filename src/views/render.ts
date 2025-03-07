@@ -44,7 +44,8 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
       this.app.finishRendering({ blob, url, duration, size: blob.size });
     });
 
-    const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d", { willReadFrequently: true })!;
+    const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
+    if (!ctx) throw new Error("Could not get 2D context");
 
     const processFrame = (index: number) => {
       if (index > this.renderOptions.trim.end) {
