@@ -56,7 +56,7 @@ class GifEncoder {
     this.totalFrames = undefined;
     this.busyQuantizers = 0;
 
-    this.writer = new Worker('/encoder/writer.js');
+    this.writer = new Worker('./writer.js');
     this.writer.postMessage(opts);
 
     const onMessage = msg => this._onWriterMessage(msg);
@@ -65,7 +65,7 @@ class GifEncoder {
 
     const numberOfWorkers = navigator.hardwareConcurrency ? Math.floor(navigator.hardwareConcurrency * 0.8) : 4;
     for (let i = 0; i < numberOfWorkers; i++) {
-      const worker = new Worker('/encoder/quantizer.js');
+      const worker = new Worker('./quantizer.js');
       const onMessage = msg => this._onQuantizerMessage(i, msg);
       worker.addEventListener('message', onMessage);
       const dispose = () => worker.removeEventListener('message', onMessage);
