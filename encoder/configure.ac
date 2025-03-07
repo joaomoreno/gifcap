@@ -3,9 +3,6 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_CC
 LT_INIT
 
-# Check for Emscripten
-AM_CONDITIONAL([EMSCRIPTEN], [test "x$CC" = "xemcc"])
-
 # Check for required libraries
 PKG_CHECK_MODULES([LIBIMAGEQUANT], [imagequant])
 
