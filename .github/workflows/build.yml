@@ -25,10 +25,11 @@ jobs:
           args: |
             bash -c "set -x && \
             apt-get update && \
-            apt-get install -y autoconf automake libtool && \
+            apt-get install -y autoconf automake libtool pkg-config && \
             cd encoder && \
-            ./configure && \
-            make && \
+            autoreconf -i && \
+            emconfigure ./configure && \
+            emmake make && \
             ls -la && \
             echo 'Current directory contents:' && \
             find . -type f"
