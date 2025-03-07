@@ -30,9 +30,10 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
 
     video.srcObject = this.captureStream;
 
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
+    if (!ctx) throw new Error("Could not get 2D context");
 
-    const worker = new Worker("/dist/ticker.js");
+    const worker = new Worker("./ticker.js");
     worker.postMessage(this.app.frameLength);
     worker.onmessage = () => {
       if (video.videoWidth === 0) {

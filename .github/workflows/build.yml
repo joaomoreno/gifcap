@@ -4,53 +4,78 @@ on: push
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
-          node-version: "14"
+          node-version: "18"
       - run: npm install
       - run: npm run build
       - name: Compile encoder
-        uses: ./.github/actions/build
-      - name: Upload
-        if: github.ref == 'refs/heads/prod'
-        uses: actions/upload-artifact@v2
+        uses: docker://emscripten/emsdk
         with:
-          name: build
-          path: |
-            dist/*.js
-            *.css
-            *.html
-            README.md
-            LICENSE
-            media/**
-            encoder/*.js
-            encoder/*.wasm
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/prod'
-    steps:
-      - name: Checkout Source
-        uses: actions/checkout@v2
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-      - name: Download
-        uses: actions/download-artifact@v2
-        with:
-          name: build
-          path: .
-      - name: Publish
+          args: |
+            bash -c "set -x && \
+            apt-get update && \
+            apt-get install -y autoconf automake libtool pkg-config build-essential git python3 libimagequant-dev && \
+            cd encoder && \
+            export CFLAGS='-O3 -s WASM=1 -s EXPORTED_RUNTIME_METHODS=[\"ccall\",\"cwrap\"] -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS=[\"_encoder_new\",\"_encoder_add_frame\",\"_encoder_finish\",\"_quantize_image\"]' && \
+            export LDFLAGS="$CFLAGS" && \
+            export CC=emcc && \
+            export LD=emcc && \
+            export AR=emar && \
+            export RANLIB=emranlib && \
+            export PKG_CONFIG_PATH=/usr/lib/pkgconfig && \
+            export PKG_CONFIG_LIBDIR=/usr/lib/pkgconfig && \
+            autoreconf -i && \
+            emconfigure ./configure --host=wasm32-unknown-emscripten && \
+            emmake make V=1 && \
+            ls -la && \
+            echo 'Current directory contents:' && \
+            find . -type f -ls"
+      - name: Debug encoder files
         run: |
-          git config --global user.name 'João Moreno'
-          git config --global user.email 'joaomoreno@users.noreply.github.com'
-          git add .
-          git commit -m 'publish gh-pages'
-          git push
+          echo "Encoder directory contents:"
+          ls -la encoder/
+          echo "Looking for wasm files:"
+          find . -name "*.wasm" -ls
+          echo "Looking for encoder files:"
+          find . -name "encoder.*" -ls
+      - name: Prepare deployment
+        run: |
+          mkdir -p deploy/encoder
+          cp -r dist/* deploy/
+          cp index.html deploy/
+          cp main.css deploy/
+          cp -r media deploy/
+          
+          # Copy encoder files with verbose output
+          echo "Copying encoder files..."
+          cp -v encoder/*.js encoder/*.wasm deploy/encoder/ 2>/dev/null || echo "Warning: encoder files not found"
+          cp -v encoder/writer.js encoder/quantizer.js encoder/gifencoder.js deploy/encoder/
+          
+          echo "Deployment encoder directory contents:"
+          ls -la deploy/encoder/
+          
+          touch deploy/.nojekyll
+          
+          # Fix paths in index.html for GitHub Pages
+          sed -i 's|href="/media|href="./media|g' deploy/index.html
+          sed -i 's|src="/encoder|src="./encoder|g' deploy/index.html
+          sed -i 's|href="main.css"|href="./main.css"|g' deploy/index.html
+          sed -i 's|src="dist/main.js"|src="./main.js"|g' deploy/index.html
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/prod'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          force_orphan: true
