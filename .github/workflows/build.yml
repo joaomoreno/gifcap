@@ -20,7 +20,7 @@ jobs:
       - name: Compile encoder
         uses: docker://emscripten/emsdk
         with:
-          args: bash -c "cd encoder && ./configure && make"
+          args: bash -c "apt-get update && apt-get install -y autoconf automake libtool && cd encoder && ./configure && make"
       - name: Create .nojekyll file
         run: touch .nojekyll
       - name: Deploy to GitHub Pages
