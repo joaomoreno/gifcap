@@ -32,6 +32,11 @@ jobs:
           cp -r media deploy/
           cp -r encoder/*.js encoder/*.wasm deploy/ || true
           touch deploy/.nojekyll
+          # Fix paths in index.html for GitHub Pages
+          sed -i 's|href="/media|href="./media|g' deploy/index.html
+          sed -i 's|src="/encoder|src="./encoder|g' deploy/index.html
+          sed -i 's|href="main.css"|href="./main.css"|g' deploy/index.html
+          sed -i 's|src="dist/main.js"|src="./main.js"|g' deploy/index.html
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/prod'
         uses: peaceiris/actions-gh-pages@v3
