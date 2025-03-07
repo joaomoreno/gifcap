@@ -16,7 +16,9 @@ jobs:
       - run: npm install
       - run: npm run build
       - name: Compile encoder
-        uses: ./.github/actions/build
+        uses: docker://emscripten/emsdk
+        with:
+          args: bash -c "cd encoder && ./configure && make"
       - name: Upload
         if: github.ref == 'refs/heads/prod'
         uses: actions/upload-artifact@v2
@@ -49,8 +51,8 @@ jobs:
           path: .
       - name: Publish
         run: |
-          git config --global user.name 'João Moreno'
-          git config --global user.email 'joaomoreno@users.noreply.github.com'
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'github-actions@users.noreply.github.com'
           git add .
           git commit -m 'publish gh-pages'
           git push
