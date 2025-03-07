@@ -22,7 +22,7 @@ jobs:
       - name: Compile encoder
         uses: docker://emscripten/emsdk
         with:
-          args: bash -c "apt-get update && apt-get install -y autoconf automake libtool && cd encoder && ./configure && make"
+          args: bash -c "apt-get update && apt-get install -y autoconf automake libtool && cd encoder && ./configure && make && ls -la encoder.* && pwd"
       - name: Prepare deployment
         run: |
           mkdir -p deploy
@@ -30,7 +30,10 @@ jobs:
           cp index.html deploy/
           cp main.css deploy/
           cp -r media deploy/
-          cp -r encoder/*.js encoder/*.wasm deploy/ || true
+          mkdir -p deploy/encoder
+          cp encoder/encoder.js encoder/encoder.wasm deploy/encoder/ || echo "Warning: encoder files not found"
+          cp encoder/writer.js encoder/quantizer.js encoder/gifencoder.js deploy/encoder/
+          ls -la deploy/encoder/
           touch deploy/.nojekyll
           # Fix paths in index.html for GitHub Pages
           sed -i 's|href="/media|href="./media|g' deploy/index.html
