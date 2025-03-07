@@ -19,12 +19,15 @@ jobs:
         uses: docker://emscripten/emsdk
         with:
           args: bash -c "cd encoder && ./configure && make"
+      - name: Create .nojekyll file
+        run: touch .nojekyll
       - name: Upload
         if: github.ref == 'refs/heads/prod'
         uses: actions/upload-artifact@v2
         with:
           name: build
           path: |
+            .nojekyll
             dist/*.js
             *.css
             *.html
