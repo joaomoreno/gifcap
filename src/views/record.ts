@@ -30,7 +30,7 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
 
     video.srcObject = this.captureStream;
 
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
 
     const worker = new Worker("./ticker.js");
     worker.postMessage(this.app.frameLength);
