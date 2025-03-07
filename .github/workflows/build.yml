@@ -28,7 +28,7 @@ jobs:
             apt-get install -y autoconf automake libtool pkg-config build-essential git python3 libimagequant-dev && \
             cd encoder && \
             export CFLAGS='-O3 -s WASM=1 -s EXPORTED_RUNTIME_METHODS=[\"ccall\",\"cwrap\"] -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS=[\"_encoder_new\",\"_encoder_add_frame\",\"_encoder_finish\",\"_quantize_image\"]' && \
-            export LDFLAGS='\$CFLAGS' && \
+            export LDFLAGS="$CFLAGS" && \
             export CC=emcc && \
             export LD=emcc && \
             export AR=emar && \
