@@ -4,15 +4,17 @@ on: push
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
-          node-version: "14"
+          node-version: "18"
       - run: npm install
       - run: npm run build
       - name: Compile encoder
@@ -21,41 +23,10 @@ jobs:
           args: bash -c "cd encoder && ./configure && make"
       - name: Create .nojekyll file
         run: touch .nojekyll
-      - name: Upload
+      - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/prod'
-        uses: actions/upload-artifact@v2
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          name: build
-          path: |
-            .nojekyll
-            dist/*.js
-            *.css
-            *.html
-            README.md
-            LICENSE
-            media/**
-            encoder/*.js
-            encoder/*.wasm
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/prod'
-    steps:
-      - name: Checkout Source
-        uses: actions/checkout@v2
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-      - name: Download
-        uses: actions/download-artifact@v2
-        with:
-          name: build
-          path: .
-      - name: Publish
-        run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'github-actions@users.noreply.github.com'
-          git add .
-          git commit -m 'publish gh-pages'
-          git push
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          force_orphan: true
