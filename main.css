@@ -240,3 +240,20 @@ input[type="range"] {
 #app:not(.home) h1 {
   display: none;
 }
+
+/* Onboarding image */
+
+.onboarding-gif {
+  border-radius: 8px;
+  padding-bottom: 20px;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Hide onboarding image on small screens */
+
+@media (max-width: 1000px) {
+  .onboarding-gif {
+    display: none;
+  }
+}
