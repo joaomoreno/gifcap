@@ -18,3 +18,10 @@ Record your screen into an animated GIF, all you need is a browser!
 - Entire screen recordings, or selection of single window;
 - Intuitive trimming UI
 - Easy cropping via visual drag-and-drop
+
+## How to build
+
+```sh
+docker build -t gifcapbuild encoder
+docker run -v "$(pwd):/src" -it gifcapbuild
+```

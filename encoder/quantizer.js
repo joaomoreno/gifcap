@@ -10,15 +10,15 @@ function process(frame) {
 
   while (initialized && (frame = frames.pop())) {
     const ptr = Module._malloc(frame.buffer.byteLength);
-    const input = new Uint8Array(Module.HEAPU8.buffer, ptr, frame.buffer.byteLength);
+    const input = new Uint8Array(HEAPU8.buffer, ptr, frame.buffer.byteLength);
     input.set(new Uint8Array(frame.buffer));
 
     const imageLength = frame.width * frame.height;
     const cb = addFunction((palettePtr, paletteLength, imagePtr) => {
       const buffer = new ArrayBuffer(paletteLength + imageLength);
       const result = new Uint8Array(buffer);
-      result.set(new Uint8Array(Module.HEAPU8.buffer, palettePtr, paletteLength));
-      result.set(new Uint8Array(Module.HEAPU8.buffer, imagePtr, imageLength), paletteLength);
+      result.set(new Uint8Array(HEAPU8.buffer, palettePtr, paletteLength));
+      result.set(new Uint8Array(HEAPU8.buffer, imagePtr, imageLength), paletteLength);
       self.postMessage({ paletteLength, buffer }, { transfer: [buffer] });
     }, 'viii');
 
