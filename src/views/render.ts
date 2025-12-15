@@ -97,6 +97,7 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
         m("canvas.hidden", {
           width: this.recording.width,
           height: this.recording.height,
+          willReadFrequently: true
         }),
       ]),
     ];
