@@ -94,7 +94,7 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
           icon: "square-fill",
           onclick: () => this.stopRecording(),
         }),
-        m("canvas.hidden", { width: 640, height: 480 }),
+        m("canvas.hidden", { width: 640, height: 480, willReadFrequently: true }),
         m("video.hidden", { autoplay: true, playsinline: true }),
       ]),
     ];
