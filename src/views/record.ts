@@ -30,7 +30,7 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
 
     video.srcObject = this.captureStream;
 
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
 
     const worker = new Worker("/dist/ticker.js");
     worker.postMessage(this.app.frameLength);
@@ -94,7 +94,7 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
           icon: "square-fill",
           onclick: () => this.stopRecording(),
         }),
-        m("canvas.hidden", { width: 640, height: 480, willReadFrequently: true }),
+        m("canvas.hidden", { width: 640, height: 480 }),
         m("video.hidden", { autoplay: true, playsinline: true }),
       ]),
     ];

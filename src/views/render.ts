@@ -44,7 +44,7 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
       this.app.finishRendering({ blob, url, duration, size: blob.size });
     });
 
-    const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d")!;
+    const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d", { willReadFrequently: true })!;
 
     const processFrame = (index: number) => {
       if (index > this.renderOptions.trim.end) {
@@ -96,8 +96,7 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
         ),
         m("canvas.hidden", {
           width: this.recording.width,
-          height: this.recording.height,
-          willReadFrequently: true
+          height: this.recording.height
         }),
       ]),
     ];

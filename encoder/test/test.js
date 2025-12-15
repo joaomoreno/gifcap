@@ -67,7 +67,7 @@ async function benchmark(imageData1, imageData2) {
 function main() {
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
   let frame = 0;
   const imageData1 = [];
