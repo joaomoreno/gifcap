@@ -1,13 +1,23 @@
 {
   "compilerOptions": {
     "noEmit": true,
-    "lib": ["ES2017", "DOM"],
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "target": "ES6",
+    "target": "es6",
     "rootDir": "src",
-    "noUnusedLocals": true
+    "noUnusedLocals": true,
+    "skipLibCheck": true
   },
-  "include": ["src", "encoder/*.d.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src",
+    "encoder/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
