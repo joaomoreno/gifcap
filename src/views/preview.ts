@@ -1,7 +1,15 @@
 import m from "mithril";
 import { App, Frame, Recording, Rect, Range, RenderOptions } from "../gifcap";
+import { FadeMode, FadeOptions, defaultFadeOptions, getFadeFactor } from "../fade";
 import Button from "../components/button";
 import View from "../components/view";
+
+const MIN_FADE_DURATION_MS = 100;
+// Worst case is fade mode "both" at the MIN_FADE_DURATION_MS floor: 100ms in
+// + 100ms out = 200ms of fade. Requiring the clip to be at least 4x that
+// keeps combined fade time to at most 50% of the clip, so it can't strobe.
+const MIN_CLIP_LENGTH_FOR_FADE_MS = 4 * MIN_FADE_DURATION_MS;
+const roundDownToTenthSecond = (ms: number): number => Math.floor(ms / 100) * 100;
 
 interface Viewport extends Rect {
   scale: number;
@@ -71,6 +79,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   private playback: Playback;
   private trim: Range;
   private crop: Rect;
+  private fade: FadeOptions;
+  private fadeDurationInput: string = "1";
 
   private didDraw = false;
   private didResize = false;
@@ -97,10 +107,40 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       width: this.recording.width,
       height: this.recording.height,
     };
+    this.fade = vnode.attrs.renderOptions?.fade ?? { ...defaultFadeOptions };
+    this.fadeDurationInput = `${this.fade.durationMs / 1000}`;
   }
 
   private get isPlaying() {
     return this.playback.disposable !== noop;
+  }
+
+  private get maxFadeDurationMs(): number {
+    const rangeLength = this.trim.end - this.trim.start;
+    return this.fade.mode === "both" ? rangeLength / 2 : rangeLength;
+  }
+
+  private get fadeAvailable(): boolean {
+    return this.trim.end - this.trim.start >= MIN_CLIP_LENGTH_FOR_FADE_MS;
+  }
+
+  private get effectiveFade(): FadeOptions {
+    return this.fadeAvailable ? this.fade : { ...this.fade, mode: "none" };
+  }
+
+  // Keeps durationMs (and its text input) in sync with maxFadeDurationMs,
+  // which changes whenever the trim range or fade mode changes ("both"
+  // halves the available duration vs. "in"/"out"). Call after any change
+  // to trim or mode so the displayed duration is never stale.
+  private clampFadeDuration(): void {
+    if (this.fade.durationMs <= this.maxFadeDurationMs) {
+      return;
+    }
+
+    const rounded = roundDownToTenthSecond(this.maxFadeDurationMs); // round down to nearest 0.1s, never exceed max
+    const clamped = Math.max(MIN_FADE_DURATION_MS, rounded);
+    this.fade = { ...this.fade, durationMs: clamped };
+    this.fadeDurationInput = `${clamped / 1000}`;
   }
 
   async oncreate(vnode: m.VnodeDOM<PreviewViewAttrs, this>) {
@@ -151,6 +191,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
   }
 
   view() {
+    const fadeAvailable = this.fadeAvailable;
+
     const actions = [
       m(Button, {
         title: this.isPlaying ? "Pause" : "Play",
@@ -185,6 +227,59 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
             }),
           ]
         ),
+      ]),
+      m(".fade-controls", [
+        m(
+          "select",
+          {
+            title: "Fade",
+            value: this.fade.mode,
+            disabled: !fadeAvailable,
+            onchange: (e: Event) => {
+              this.fade = { ...this.fade, mode: (e.target as HTMLSelectElement).value as FadeMode };
+              this.clampFadeDuration();
+            },
+          },
+          [
+            m("option", { value: "none" }, "No fade"),
+            m("option", { value: "in" }, "Fade in"),
+            m("option", { value: "out" }, "Fade out"),
+            m("option", { value: "both" }, "Fade in & out"),
+          ]
+        ),
+        this.fade.mode !== "none" &&
+          !fadeAvailable &&
+          m("span.fade-unavailable", "Clip too short for fade"),
+        this.fade.mode !== "none" &&
+          fadeAvailable &&
+          m(".fade-duration", [
+            m("input", {
+              type: "number",
+              title: "Fade length (seconds)",
+              min: MIN_FADE_DURATION_MS / 1000,
+              max: this.maxFadeDurationMs / 1000,
+              step: 0.1,
+              value: this.fadeDurationInput,
+              oninput: (e: InputEvent) => {
+                this.fadeDurationInput = (e.target as HTMLInputElement).value;
+                const value = (e.target as HTMLInputElement).valueAsNumber;
+                if (Number.isFinite(value) && value > 0) {
+                  this.fade = { ...this.fade, durationMs: Math.round(value * 1000) };
+                }
+              },
+              onchange: (e: InputEvent) => {
+                const value = (e.target as HTMLInputElement).valueAsNumber;
+                const rawMs = Number.isFinite(value) && value > 0 ? value * 1000 : this.fade.durationMs;
+                const rounded = Math.round(rawMs / 100) * 100;
+                const maxRounded = roundDownToTenthSecond(this.maxFadeDurationMs); // never exceed real max after rounding
+                const clamped = Math.max(MIN_FADE_DURATION_MS, Math.min(rounded, maxRounded));
+                this.fade = { ...this.fade, durationMs: clamped };
+                this.fadeDurationInput = `${clamped / 1000}`;
+              },
+            }),
+            m("span.fade-duration-suffix", "s"),
+            m("span.fade-duration-max", `max ${(roundDownToTenthSecond(this.maxFadeDurationMs) / 1000).toFixed(1)}s`),
+          ]),
       ]),
       m(Button, {
         label: "Render",
@@ -265,6 +360,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       } else {
         this.playback.head = Math.max(this.playback.start, Math.min(this.playback.end, head));
       }
+
+      this.clampFadeDuration();
 
       m.redraw();
     };
@@ -431,7 +528,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     }
 
     const index = getFrameIndex(this.recording.frames, this.playback.head);
-    this.sourceCtx.putImageData(this.recording.frames[index].imageData, 0, 0);
+    const frame = this.recording.frames[index];
+    this.sourceCtx.putImageData(frame.imageData, 0, 0);
 
     const transform = this.ctx.getTransform();
     this.ctx.setTransform();
@@ -439,6 +537,27 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
 
     this.ctx.setTransform(transform);
     this.ctx.drawImage(this.sourceCanvas, this.viewport.left, this.viewport.top);
+
+    // Live fade preview: fade.ts is the single source of truth for fade
+    // timing, shared with render.ts, so the two can never drift apart.
+    // Both frame and range are snapped to actual frame timestamps here,
+    // matching exactly what render.ts uses, so a static displayed frame
+    // never darkens/lightens mid-display and the trim boundaries can't
+    // shift between preview and export.
+    const trimStartIndex = getFrameIndex(this.recording.frames, this.trim.start);
+    const trimEndIndex = getFrameIndex(this.recording.frames, this.trim.end);
+    const fadeFactor = getFadeFactor(
+      frame.timestamp,
+      this.recording.frames[trimStartIndex].timestamp,
+      this.recording.frames[trimEndIndex].timestamp,
+      this.effectiveFade
+    );
+    if (fadeFactor > 0) {
+      this.ctx.fillStyle = "black";
+      this.ctx.globalAlpha = fadeFactor;
+      this.ctx.fillRect(this.viewport.left, this.viewport.top, this.recording.width, this.recording.height);
+      this.ctx.globalAlpha = 1;
+    }
 
     if (
       this.crop.top !== 0 ||
@@ -489,6 +608,7 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
         end: getFrameIndex(this.recording.frames, this.trim.end),
       },
       crop: this.crop,
+      fade: this.effectiveFade,
     });
   }
 }

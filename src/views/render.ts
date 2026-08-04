@@ -1,5 +1,6 @@
 import m from "mithril";
 import { App, Recording, RenderOptions } from "../gifcap";
+import { applyFade, getFadeFactor } from "../fade";
 import Button from "../components/button";
 import View from "../components/view";
 
@@ -66,6 +67,17 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
         this.renderOptions.crop.width,
         this.renderOptions.crop.height
       );
+
+      // fade.ts is the single source of truth for fade timing, shared
+      // with the live preview in preview.ts, so the two can never
+      // drift apart.
+      const fadeFactor = getFadeFactor(
+        frame.timestamp,
+        this.recording.frames[this.renderOptions.trim.start].timestamp,
+        this.recording.frames[this.renderOptions.trim.end].timestamp,
+        this.renderOptions.fade
+      );
+      applyFade(imageData, fadeFactor);
 
       const delay =
         index < this.renderOptions.trim.end

@@ -1,3 +1,5 @@
+import { FadeOptions } from "./fade";
+
 export interface Frame {
   readonly imageData: ImageData;
   readonly timestamp: number;
@@ -24,6 +26,7 @@ export interface Range {
 export interface RenderOptions {
   readonly trim: Range;
   readonly crop: Rect;
+  readonly fade: FadeOptions;
 }
 
 export interface Gif {
