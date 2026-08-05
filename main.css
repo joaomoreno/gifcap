@@ -231,6 +231,56 @@ input[type="range"] {
   padding-right: 0 !important;
 }
 
+.fade-controls {
+  display: flex;
+  align-items: center;
+  margin-right: 1em;
+}
+
+.fade-controls > select {
+  width: auto;
+  margin: 0;
+}
+
+.fade-duration {
+  display: flex;
+  align-items: center;
+  margin-left: 0.5em;
+}
+
+.fade-duration > input[type="number"] {
+  width: 2.5em;
+  margin: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.fade-duration > input[type="number"]::-webkit-outer-spin-button,
+.fade-duration > input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.fade-duration-suffix {
+  margin-left: 0.25em;
+  color: #9e9e9e;
+  font-size: 0.9em;
+}
+
+.fade-duration-max {
+  margin-left: 0.5em;
+  color: #9e9e9e;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.fade-unavailable {
+  margin-left: 0.5em;
+  color: #9e9e9e;
+  font-size: 0.85em;
+  font-style: italic;
+}
+
 .button.outline {
   border: none;
 }

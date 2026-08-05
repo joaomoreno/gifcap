@@ -11,7 +11,8 @@
     "target": "es6",
     "rootDir": "src",
     "noUnusedLocals": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": []
   },
   "include": [
     "src",
