@@ -13,6 +13,7 @@ declare global {
 }
 
 const FPS = 12;
+const FULL_RESOLUTION_KEY = "gifcap.fullResolution";
 
 type State =
   | { name: "start" }
@@ -31,6 +32,16 @@ class Main implements App {
   readonly frameLength = Math.floor(1000 / FPS);
 
   private _state: State = { name: "start" };
+  private _fullResolution = localStorage.getItem(FULL_RESOLUTION_KEY) === "true";
+
+  get fullResolution(): boolean {
+    return this._fullResolution;
+  }
+
+  set fullResolution(value: boolean) {
+    this._fullResolution = value;
+    localStorage.setItem(FULL_RESOLUTION_KEY, String(value));
+  }
 
   private get state(): State {
     return this._state;

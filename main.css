@@ -107,6 +107,18 @@ h1 {
   border-top: 1px solid #9e9e9e;
 }
 
+.actions > .notice {
+  align-self: center;
+  margin-left: 1em;
+  color: var(--color-error);
+  font-size: 0.8em;
+}
+
+p.resolution {
+  font-size: 0.8em;
+  color: var(--color-grey);
+}
+
 .actions:empty {
   display: none;
 }

@@ -31,6 +31,18 @@ export default class StartView implements m.ClassComponent<StartViewAttrs> {
             onclick: () => this.app.startRecording(),
             primary: true,
           }),
+      !isMobile &&
+        window.devicePixelRatio > 1 &&
+        m("p.resolution", [
+          m("label", [
+            m("input", {
+              type: "checkbox",
+              checked: this.app.fullResolution,
+              onchange: (e: Event) => (this.app.fullResolution = (e.target as HTMLInputElement).checked),
+            }),
+            " Record at full Retina resolution (4× more memory, much shorter maximum recording)",
+          ]),
+        ]),
     ]);
   }
 }
