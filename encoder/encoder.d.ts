@@ -7,6 +7,7 @@ declare class GifEncoder {
   constructor(opts: { width: number; height: number });
   on<E extends keyof GifEncoderEvent>(event: E, fn: (data: GifEncoderEvent[E]) => void): void;
   once<E extends keyof GifEncoderEvent>(event: E, fn: (data: GifEncoderEvent[E]) => void): void;
+  readonly isBusy: boolean;
   addFrame(imageData: ImageData, delay: number): void;
   render(): void;
   abort(): void;

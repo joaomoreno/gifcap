@@ -197,6 +197,8 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
         icon: "trashcan",
         onclick: () => this.app.discardGif(),
       }),
+      this.recording.outOfMemory &&
+        m("span.notice", "Recording stopped early: the browser ran out of memory."),
     ];
 
     return [

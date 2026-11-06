@@ -1,0 +1,84 @@
+diff --git a/src/gifwrite.c b/src/gifwrite.c
+index b7e5da1..0ff3bbf 100644
+--- a/src/gifwrite.c
++++ b/src/gifwrite.c
+@@ -290,20 +290,24 @@ struct selected_node {
+ static inline void
+ gfc_lookup_lossy_try_node(Gif_CodeTable *gfc, const Gif_Colormap *gfcm, Gif_Image *gfi,
+   unsigned pos, Gif_Node *node, uint8_t suffix, uint8_t next_suffix,
+-  gfc_rgbdiff dither, unsigned long base_diff, const unsigned int max_diff, struct selected_node *best_t);
++  gfc_rgbdiff dither, unsigned long base_diff, const unsigned int max_diff, unsigned endpos, struct selected_node *best_t);
++
++/* Each step of gfc_lookup_lossy recurses once per matched pixel. On long runs of
++ * similar pixels (flat areas of large screenshots) the recursion gets thousands
++ * of levels deep and overflows the JS engine's native stack when compiled to
++ * WebAssembly ("Maximum call stack size exceeded"). Cap the matched run length. */
++#define GFC_LOSSY_MAX_RUN 1024
+ 
+ /* Recursive loop
+  * Find node that is descendant of node (or start new search if work_node is null) that best matches pixels starting at pos
+  * base_diff and dither are distortion from search made so far */
+ static struct selected_node
+ gfc_lookup_lossy(Gif_CodeTable *gfc, const Gif_Colormap *gfcm, Gif_Image *gfi,
+-  unsigned pos, Gif_Node *node, unsigned long base_diff, gfc_rgbdiff dither, const unsigned int max_diff)
++  unsigned pos, Gif_Node *node, unsigned long base_diff, gfc_rgbdiff dither, const unsigned int max_diff, unsigned endpos)
+ {
+-  const unsigned image_endpos = gfi->width * gfi->height;
+-
+   struct selected_node best_t = {node, pos, base_diff};
+   uint8_t suffix;
+-  if (pos >= image_endpos) return best_t;
++  if (pos >= endpos) return best_t;
+ 
+   suffix = gif_pixel_at_pos(gfi, pos);
+   assert(!node || (node >= gfc->nodes && node < gfc->nodes + NODES_SIZE));
+@@ -311,7 +315,7 @@ gfc_lookup_lossy(Gif_CodeTable *gfc, const Gif_Colormap *gfcm, Gif_Image *gfi,
+   if (!node) {
+     gfc_rgbdiff zero_diff = {0, 0, 0};
+     /* prefix of the new node must be same as suffix of previously added node */
+-    return gfc_lookup_lossy(gfc, gfcm, gfi, pos+1, &gfc->nodes[suffix], base_diff, zero_diff, max_diff);
++    return gfc_lookup_lossy(gfc, gfcm, gfi, pos+1, &gfc->nodes[suffix], base_diff, zero_diff, max_diff, endpos);
+   }
+ 
+   /* search all nodes that are less than max_diff different from the desired pixel */
+@@ -319,12 +323,12 @@ gfc_lookup_lossy(Gif_CodeTable *gfc, const Gif_Colormap *gfcm, Gif_Image *gfi,
+     int i;
+     for(i=0; i < gfc->clear_code; i++) {
+       if (!node->child.m[i]) continue;
+-      gfc_lookup_lossy_try_node(gfc, gfcm, gfi, pos, node->child.m[i], suffix, i, dither, base_diff, max_diff, &best_t);
++      gfc_lookup_lossy_try_node(gfc, gfcm, gfi, pos, node->child.m[i], suffix, i, dither, base_diff, max_diff, endpos, &best_t);
+     }
+   }
+   else {
+     for (node = node->child.s; node; node = node->sibling) {
+-      gfc_lookup_lossy_try_node(gfc, gfcm, gfi, pos, node, suffix, node->suffix, dither, base_diff, max_diff, &best_t);
++      gfc_lookup_lossy_try_node(gfc, gfcm, gfi, pos, node, suffix, node->suffix, dither, base_diff, max_diff, endpos, &best_t);
+     }
+   }
+ 
+@@ -345,13 +349,13 @@ gfc_lookup_lossy(Gif_CodeTable *gfc, const Gif_Colormap *gfcm, Gif_Image *gfi,
+ static inline void
+ gfc_lookup_lossy_try_node(Gif_CodeTable *gfc, const Gif_Colormap *gfcm, Gif_Image *gfi,
+   unsigned pos, Gif_Node *node, uint8_t suffix, uint8_t next_suffix,
+-  gfc_rgbdiff dither, unsigned long base_diff, const unsigned int max_diff, struct selected_node *best_t)
++  gfc_rgbdiff dither, unsigned long base_diff, const unsigned int max_diff, unsigned endpos, struct selected_node *best_t)
+ {
+   unsigned int diff = suffix == next_suffix ? 0 : color_diff(gfcm->col[suffix], gfcm->col[next_suffix], suffix == gfi->transparent, next_suffix == gfi->transparent, dither);
+   if (diff <= max_diff) {
+     gfc_rgbdiff new_dither = diffused_difference(gfcm->col[suffix], gfcm->col[next_suffix], suffix == gfi->transparent, next_suffix == gfi->transparent, dither);
+     /* if the candidate pixel is good enough, check all possible continuations of that dictionary string */
+-    struct selected_node t = gfc_lookup_lossy(gfc, gfcm, gfi, pos+1, node, base_diff + diff, new_dither, max_diff);
++    struct selected_node t = gfc_lookup_lossy(gfc, gfcm, gfi, pos+1, node, base_diff + diff, new_dither, max_diff, endpos);
+ 
+     /* search is biased towards finding longest candidate that is below treshold rather than a match with minimum average error */
+     if (t.pos > best_t->pos || (t.pos == best_t->pos && t.diff < best_t->diff)) {
+@@ -492,7 +496,8 @@ write_compressed_data(Gif_Stream *gfs, Gif_Image *gfi,
+      * Find the next code to output. */
+     if (grr->gcinfo.loss) {
+       gfc_rgbdiff zero_diff = {0, 0, 0};
+-      struct selected_node t = gfc_lookup_lossy(gfc, gfcm, gfi, pos, NULL, 0, zero_diff, grr->gcinfo.loss * 10);
++      unsigned lossy_endpos = (image_endpos - pos > GFC_LOSSY_MAX_RUN) ? (pos + GFC_LOSSY_MAX_RUN) : image_endpos;
++      struct selected_node t = gfc_lookup_lossy(gfc, gfcm, gfi, pos, NULL, 0, zero_diff, grr->gcinfo.loss * 10, lossy_endpos);
+ 
+       work_node = t.node;
+       run = t.pos - pos;
