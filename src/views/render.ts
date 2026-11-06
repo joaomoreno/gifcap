@@ -29,10 +29,20 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
       height: this.renderOptions.crop.height,
     });
 
-    gif.on("progress", (progress) => {
-      this.progress = progress;
+    let aborted = false;
+    this._onbeforeremove = () => {
+      aborted = true;
+      gif.abort();
+    };
+
+    // frames are fed only as fast as they get quantized, so feeding progress tracks encoding progress
+    const start = this.renderOptions.trim.start;
+    const end = this.renderOptions.trim.end;
+    const setProgress = (progress: number) => {
+      this.progress = Math.max(this.progress, progress);
       m.redraw();
-    });
+    };
+    gif.on("progress", setProgress);
 
     gif.once("finished", (blob) => {
       const url = URL.createObjectURL(blob);
@@ -47,9 +57,18 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
     const ctx = vnode.dom.getElementsByTagName("canvas")[0].getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
 
     const processFrame = (index: number) => {
-      if (index > this.renderOptions.trim.end) {
-        this._onbeforeremove = () => gif.abort();
+      if (aborted) {
+        return;
+      }
+
+      if (index > end) {
         gif.render();
+        return;
+      }
+
+      // backpressure: wait for quantizers to catch up, so frame copies don't accumulate in memory
+      if (gif.isBusy) {
+        setTimeout(() => processFrame(index), 10);
         return;
       }
 
@@ -68,14 +87,15 @@ export default class RenderView implements m.ClassComponent<RenderViewAttrs> {
       );
 
       const delay =
-        index < this.renderOptions.trim.end
+        index < end
           ? this.recording.frames[index + 1].timestamp - frame.timestamp
           : this.app.frameLength;
       gif.addFrame(imageData, delay);
+      setProgress((index - start) / (end - start + 1));
       setTimeout(() => processFrame(index + 1), 0);
     };
 
-    processFrame(this.renderOptions.trim.start);
+    processFrame(start);
   }
 
   view() {

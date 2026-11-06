@@ -97,6 +97,12 @@ class GifEncoder {
     this._work();
   }
 
+  // true when enough frames wait for a free quantizer: callers should hold off adding
+  // more, otherwise every pending (full-size) frame copy piles up in memory
+  get isBusy() {
+    return !!this.quantizers && this.frames.length - this.framesSentToQuantize > this.quantizers.length;
+  }
+
   _work() {
     if (!this.quantizers) {
       return;
