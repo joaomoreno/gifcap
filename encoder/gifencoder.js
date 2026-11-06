@@ -1,7 +1,15 @@
-// IDEA: could we speed this up with WASM?
+// Screen captures (notably on macOS) carry slight per-pixel jitter: colour values differing by a few
+// levels between otherwise identical frames. An exact comparison then marks nearly the whole screen
+// as changed on every frame, which blows up the GIF size ~10x. Differences up to this tolerance
+// (per channel, 0-255) are ignored: they are invisible once the frame is quantized to 256 colours.
+const DIFF_TOLERANCE = 8;
+
+// bounding box of pixels differing by more than DIFF_TOLERANCE in any channel
 function computeDiff(a, b, width) {
   const ua = new Uint32Array(a);
   const ub = new Uint32Array(b);
+  const ba = new Uint8Array(a);
+  const bb = new Uint8Array(b);
 
   let top = undefined;
   let bottom = undefined;
@@ -9,7 +17,15 @@ function computeDiff(a, b, width) {
   let right = -1;
 
   for (let i = 0; i < ua.length; i++) {
-    if ((ua[i] !== ub[i])) {
+    if (ua[i] === ub[i]) {
+      continue;
+    }
+
+    const o = i * 4;
+    if (Math.abs(ba[o] - bb[o]) > DIFF_TOLERANCE
+      || Math.abs(ba[o + 1] - bb[o + 1]) > DIFF_TOLERANCE
+      || Math.abs(ba[o + 2] - bb[o + 2]) > DIFF_TOLERANCE
+      || Math.abs(ba[o + 3] - bb[o + 3]) > DIFF_TOLERANCE) {
       const y = Math.floor(i / width);
       const x = i % width;
 
@@ -25,6 +41,17 @@ function computeDiff(a, b, width) {
   }
 
   return undefined;
+}
+
+// copies the box region of `from` into `to` (both full-frame buffers)
+function patchBuffer(to, from, box, width) {
+  const dst = new Uint32Array(to);
+  const src = new Uint32Array(from);
+
+  for (let y = box.top; y < box.top + box.height; y++) {
+    const start = box.left + y * width;
+    dst.set(src.subarray(start, start + box.width), start);
+  }
 }
 
 function cropBuffer(_from, box, width) {
@@ -47,7 +74,9 @@ class GifEncoder {
     this.opts = opts;
     this.listeners = new Map();
 
-    this.previousBuffer = undefined;
+    // what the GIF shows so far: diffing against it (not the previous raw frame) keeps sub-tolerance
+    // changes from silently accumulating, e.g. a slow fade gets drawn once it exceeds the tolerance
+    this.displayedBuffer = undefined;
     this.frames = [];
     this.quantizers = [];
     this.framesSentToQuantize = 0;
@@ -80,20 +109,21 @@ class GifEncoder {
 
     const buffer = imageData.data.buffer;
 
-    if (!this.previousBuffer) {
+    if (!this.displayedBuffer) {
+      this.displayedBuffer = buffer.slice(0); // `buffer` itself gets transferred to a quantizer
       this.frames.push({ buffer, top: 0, left: 0, width: this.opts.width, height: this.opts.height, paletteLength: undefined, delay, quantized: false });
     } else {
-      const box = computeDiff(buffer, this.previousBuffer, this.opts.width);
+      const box = computeDiff(buffer, this.displayedBuffer, this.opts.width);
 
       if (!box) {
-        this.frames[this.frames.length - 1].delay += delay; // no changes, let's drop the frame
+        this.frames[this.frames.length - 1].delay += delay; // no visible changes, let's drop the frame
       } else {
         const crop = cropBuffer(buffer, box, this.opts.width);
+        patchBuffer(this.displayedBuffer, buffer, box, this.opts.width);
         this.frames.push({ buffer: crop, ...box, paletteLength: undefined, delay, quantized: false });
       }
     }
 
-    this.previousBuffer = buffer;
     this._work();
   }
 
@@ -187,6 +217,7 @@ class GifEncoder {
 
     this.quantizers = undefined;
     this.frames = undefined;
+    this.displayedBuffer = undefined;
   }
 
   // event listener
