@@ -31,7 +31,7 @@ docker run -v "$(pwd):/src" -it gifcapbuild
 </summary>
 
 #### 1. Install necessary tools in eg. Debian:
-(Note: `libimagequant` uses `binutils`' [`ar`](https://www.man7.org/linux/man-pages/man1/ar.1.html) in its Makefile, and `emsdk` requires `python` to initialize itself - hence they are included here.)
+(Note: `libimagequant` uses `binutils`' [`ar`](https://www.man7.org/linux/man-pages/man1/ar.1.html) in its Makefile, and `emsdk` requires `python` and `xz` to initialize itself - hence they are included here.)
 ```sh
 sudo apt update -y && sudo apt install -y autoconf binutils git make python3 xz-utils
 ```
@@ -46,8 +46,8 @@ cd ~/src/
 git clone https://github.com/emscripten-core/emsdk.git
 ./emsdk/emsdk install latest
 ./emsdk/emsdk activate latest
-. ./emsdk/emsdk_env.sh			# Inform the current shell environment of emcc & node's existence.
-emcc -v; node -v; npm -v		# Test whether emcc, node & npm all actually work.
+. ./emsdk/emsdk_env.sh                 # Inform the current shell environment of emcc & node's existence.
+emcc -v; node -v; npm -v               # Test whether emcc, node & npm all actually work.
 ```
 #### 4. Fetch gifcap and also its .gitmodules:
 ```sh
@@ -76,8 +76,8 @@ make encoder.js
 npm install
 npm run build
 ```
-#### 8. Test self-hosted on [http://localhost:5000](http://localhost:5000) 
+#### 8. Test self-hosted gifcap on [http://localhost:5000](http://localhost:5000) 
 ```sh
-npm run serve				# Point a web-browser to http://localhost:5000 whilst this is running.
+npm run serve                          # Point a web-browser to http://localhost:5000 whilst this is running.
 ```
 </details>
