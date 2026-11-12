@@ -17,7 +17,7 @@ export default class Timer implements m.ClassComponent<TimerAttrs> {
   view(vnode: m.Vnode<TimerAttrs>) {
     return m("span.tag.is-small", [
       m("img", {
-        src: "https://icongr.am/octicons/clock.svg?size=16&color=333333",
+        src: "/media/clock-16-333.svg",
       }),
       timediff(vnode.attrs.duration),
     ]);

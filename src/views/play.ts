@@ -87,7 +87,7 @@ export default class PlayView implements m.ClassComponent<PlayViewAttrs> {
                 },
                 [
                   m("img", {
-                    src: "https://icongr.am/octicons/download.svg?size=16&color=333333",
+                    src: "/media/download-16-333.svg",
                   }),
                   humanSize(this.gif.size),
                 ]
