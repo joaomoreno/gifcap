@@ -27,7 +27,7 @@ export default class StartView implements m.ClassComponent<StartViewAttrs> {
         ? undefined
         : m(Button, {
             label: "Start Recording",
-            icon: "play",
+            icon: "triangle-circle",
             onclick: () => this.app.startRecording(),
             primary: true,
           }),

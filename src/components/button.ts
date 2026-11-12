@@ -25,9 +25,9 @@ export default class Button implements m.ClassComponent<ButtonAttrs> {
         },
         [
           m("img", {
-            src: `https://icongr.am/${vnode.attrs.iconset || "octicons"}/${vnode.attrs.icon}.svg?size=16&color=${
-              vnode.attrs.outline ? "333333" : "ffffff"
-            }`,
+            src: `/${vnode.attrs.iconset || "media"}/${vnode.attrs.icon}-16-${
+              vnode.attrs.outline ? "333" : "fff"
+            }.svg`,
           }),
           vnode.attrs.label,
         ]
@@ -45,9 +45,9 @@ export default class Button implements m.ClassComponent<ButtonAttrs> {
         },
         [
           m("img", {
-            src: `https://icongr.am/${vnode.attrs.iconset || "octicons"}/${vnode.attrs.icon}.svg?size=16&color=${
-              vnode.attrs.outline ? "333333" : "ffffff"
-            }`,
+            src: `/${vnode.attrs.iconset || "media"}/${vnode.attrs.icon}-16-${
+              vnode.attrs.outline ? "333" : "fff"
+            }.svg`,
           }),
           vnode.attrs.label,
         ]

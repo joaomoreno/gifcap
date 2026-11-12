@@ -154,7 +154,6 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
     const actions = [
       m(Button, {
         title: this.isPlaying ? "Pause" : "Play",
-        iconset: "material",
         icon: this.isPlaying ? "pause" : "play",
         primary: true,
         onclick: () => this.togglePlayPause(),

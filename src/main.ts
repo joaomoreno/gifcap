@@ -62,7 +62,7 @@ class Main implements App {
             m("a", { href: "https://github.com/joaomoreno/gifcap" }, [
               m("img", {
                 alt: "GitHub",
-                src: "https://icongr.am/octicons/mark-github.svg?size=18&color=9e9e9e",
+                src: "/media/mark-github-18.svg",
               }),
               " joaomoreno/gifcap",
             ]),
@@ -77,7 +77,7 @@ class Main implements App {
               [
                 m("img", {
                   alt: "GitHub",
-                  src: "https://icongr.am/material/coffee.svg?size=18&color=9e9e9e",
+                  src: "/media/coffee-18.svg",
                 }),
                 " Like the tool? Sponsor me!",
               ]
@@ -87,7 +87,7 @@ class Main implements App {
             "Made with ",
             m("img", {
               alt: "love",
-              src: "https://icongr.am/octicons/heart.svg?size=18&color=9e9e9e",
+              src: "/media/heart-18.svg",
             }),
             " by ",
             m("a", { href: "https://github.com/joaomoreno" }, ["João Moreno"]),
