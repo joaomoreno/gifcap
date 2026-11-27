@@ -192,6 +192,14 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
         onclick: () => this.startRendering(),
         primary: true,
       }),
+      this.recording.video
+        ? m(Button, {
+            title: "Save recording as video",
+            iconset: "material",
+            icon: "movie",
+            onclick: () => this.saveVideo(),
+          })
+        : null,
       m(Button, {
         title: "Discard",
         icon: "trashcan",
@@ -490,5 +498,17 @@ export default class PreviewView implements m.ClassComponent<PreviewViewAttrs> {
       },
       crop: this.crop,
     });
+  }
+
+  private saveVideo(): void {
+    const video = this.recording.video;
+
+    if (video) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(video);
+      a.download = "gifcap.webm";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
   }
 }

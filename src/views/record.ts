@@ -1,5 +1,5 @@
 import m from "mithril";
-import { App, Frame } from "../gifcap";
+import { App, Frame, MediaRecorderLike } from "../gifcap";
 import Button from "../components/button";
 import Timer from "../components/timer";
 import View from "../components/view";
@@ -17,6 +17,9 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
   private width: number = 0;
   private height: number = 0;
   private frames: Frame[] = [];
+  private videoRecorder: MediaRecorderLike | undefined;
+  private videoReady: Promise<Blob | undefined> = Promise.resolve(undefined);
+  private stopped = false;
   private _onbeforeremove: Function | undefined;
 
   constructor(vnode: m.CVnode<RecordViewAttrs>) {
@@ -31,6 +34,18 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
     video.srcObject = this.captureStream;
 
     const ctx = canvas.getContext("2d", { willReadFrequently: true }) as CanvasRenderingContext2D;
+
+    if (typeof MediaRecorder !== "undefined") {
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : undefined;
+      this.videoRecorder = mimeType ? new MediaRecorder(this.captureStream, { mimeType }) : new MediaRecorder(this.captureStream);
+
+      const chunks: Blob[] = [];
+      this.videoRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      this.videoReady = new Promise((resolve) => {
+        this.videoRecorder!.onstop = () => resolve(new Blob(chunks, { type: this.videoRecorder!.mimeType }));
+      });
+      this.videoRecorder.start();
+    }
 
     const worker = new Worker("/dist/ticker.js");
     worker.postMessage(this.app.frameLength);
@@ -101,10 +116,22 @@ export default class RecordView implements m.ClassComponent<RecordViewAttrs> {
   }
 
   private stopRecording(): void {
-    this.app.stopRecording({
-      width: this.width,
-      height: this.height,
-      frames: this.frames,
-    });
+    if (this.stopped) {
+      return;
+    }
+    this.stopped = true;
+
+    if (this.videoRecorder && this.videoRecorder.state !== "inactive") {
+      this.videoRecorder.stop();
+    }
+
+    this.videoReady.then((video) =>
+      this.app.stopRecording({
+        width: this.width,
+        height: this.height,
+        frames: this.frames,
+        video,
+      })
+    );
   }
 }
